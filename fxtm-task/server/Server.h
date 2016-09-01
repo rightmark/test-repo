@@ -179,7 +179,7 @@ protected:
 
         for (size_t i = 0; i < n; ++i)
         {
-            m_worker.push_back(new CWorkThreadTcp);
+            m_worker.push_back(move(new CWorkThreadTcp));
 
             if (!m_worker[i]->Create(false)) return false;
         }

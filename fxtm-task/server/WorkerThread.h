@@ -407,7 +407,7 @@ public:
 
                     if (!bFound) // free worker not found
                     {
-                        worker.push_back(new CWorkThreadTcp);
+                        worker.push_back(move(new CWorkThreadTcp));
 
                         worker.back()->Create(false);
                     }
