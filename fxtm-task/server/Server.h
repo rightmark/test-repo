@@ -69,7 +69,15 @@ protected:
 
     LPCTSTR FStr(int family) const throw()
     {
-        return (family == AF_INET) ? _T("AF_INET") : _T("AF_INET6");
+        switch (family)
+        {
+        case AF_INET:
+            return _T("AF_INET");
+        case AF_INET6:
+            return _T("AF_INET6");
+        default:
+            return _T("AF_UNSPEC");
+        }
     }
 
 private:

@@ -123,11 +123,12 @@ protected:
         name.StripPath();
         name.RemoveExtension();
 
-        MSG(0, _T("usage: %s [-f 4|6] [-p port] [-s addr] [-t udp|tcp] [-b size]"), (LPCTSTR)name);
+        MSG(0, _T("\nUsage: %s [-f 4|6] [-p port] [-s addr] [-t udp|tcp] [-b size]"), (LPCTSTR)name);
 #ifdef _CLIENT_BUILD_ // client only parameters
-        MSG(0, _T(" [-n number] [-d ticks] [-i id] [-w time]"));
-#endif
+        MSG(0, _T(" [-n number] [-d ticks] [-i id] [-w time]\n"));
+#else
         MSG(0, _T("\n"));
+#endif
         MSG(0, _T("  -f 4|6     Address family, 4 = IPv4, 6 = IPv6 (default: both)\n"));
         MSG(0, _T("  -p port    Port number (default: %s)\n"), DEFAULT_PORT);
         MSG(0, _T("  -s addr    Server ip address (default: INADDR_ANY,INADDR6_ANY)\n"));
