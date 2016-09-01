@@ -7,12 +7,14 @@ class CTask
     typedef ATL::CComAutoCriticalSection AutoCriticalSection;
     typedef ATL::CComCritSecLock<AutoCriticalSection> AutoLock;
 
+    // 23.4.7.1 multiset supports equivalent keys (possibly contains multiple copies of the same key value)
+    // so, map is preferable..
     typedef std::map<SHORT, UINT> TStorage;
 
     static const size_t STORAGE_SIZE = (KEY_MAXIMUM + 1);
 
     static const UINT SAVER_WAIT = 100; // ms
-
+    // save state interval in seconds
     static const UINT
         INTERVAL_MIN    = 5,
         INTERVAL_MAX    = 50,
@@ -29,13 +31,11 @@ public:
     {}
 
     ~CTask() throw() { Terminate(); }
-
-#if (_MSC_VER >= 1900)
+    //
     CTask(CTask const&) = delete;             // copy ctor
     CTask(CTask&&) = delete;                  // move ctor
     CTask& operator=(CTask const&) = delete;  // copy assign
     CTask& operator=(CTask &&) = delete;      // move assign
-#endif
 
     bool LoadState(LPCTSTR fn) throw()
     {
@@ -84,19 +84,19 @@ public:
         {
             CAtlFile f;
 
-            if (SUCCEEDED(f.Create(m_file, GENERIC_WRITE, FILE_SHARE_READ, CREATE_ALWAYS)))  // @TODO: TBD..
+            if (SUCCEEDED(f.Create(m_file, GENERIC_WRITE, FILE_SHARE_READ, CREATE_ALWAYS)))
             {
                 Lock();
 
-                TStorage temp = m_data;
+                auto temp = m_data;
 
                 Unlock();
 
                 UINT buf[STORAGE_SIZE] = {0};
 
-                for (TStorage::const_iterator it = temp.begin(); it != temp.end(); ++it)
+                for (const auto& it : temp)
                 {
-                    buf[it->first] = it->second;
+                    buf[it.first] = it.second;
                 }
                 bRet = SUCCEEDED(f.Write(buf, sizeof(buf)));
 
@@ -106,24 +106,15 @@ public:
         return bRet;
     }
 
-    // @TODO: km 20160822 - use C++11 parametric return type..
-    UINT GetResult(SHORT val) throw()
+    UINT GetResult(SHORT key) throw()
     {
         UINT result = 0;
 
         AutoLock _(m_cs);
 
-        TStorage::iterator it = m_data.find(val);
-        if (it != m_data.end())
-        {
-            it->second++; 
-        }
-        else
-        {
-            m_data[val] = 1;
-        }
+        ++m_data[key]; // ++(data[k])
 
-        m_sqsum += (val * val);
+        m_sqsum += (key * key);
         if (++m_count)
         {
             result = (UINT)(m_sqsum / m_count);
@@ -162,7 +153,7 @@ private:
             UINT64 tick = ::GetTickCount64();
             if (tick > lasttick)
             {
-                lasttick = tick + m_interval;
+                lasttick = tick + m_interval * 1000; // ms
 
                 if (m_bRequiresSave)
                 {

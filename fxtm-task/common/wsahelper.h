@@ -121,6 +121,10 @@ public:
     {
         return (bind(m_s, pai->ai_addr, (int)pai->ai_addrlen) != SOCKET_ERROR);
     }
+    bool Connect(PADDRINFOT pai) throw()
+    {
+        return (connect(m_s, pai->ai_addr, (int)pai->ai_addrlen) != SOCKET_ERROR);
+    }
     bool IOCtl(DWORD code, PBOOL bOpt) throw() // get the ioctl
     {
         DWORD bytes = 0;
@@ -162,7 +166,6 @@ public:
         return (shutdown(m_s, how) != SOCKET_ERROR);
     }
 
-    // @TODO: km 20160724 - consider to add RecvFrom(), SendTo(), ..
 
 public:
     // @TODO: km 20160825 - TBD..
@@ -256,7 +259,7 @@ private:
 
 class CAddrInfo
 {
-    CAddrInfo() throw() {}
+    CAddrInfo() throw() {} // hidden ctor
 public:
     CAddrInfo(LPCTSTR host, LPCTSTR port, int socktype, int family = AF_UNSPEC, int flags = 0) : m_ai(NULL)
     {

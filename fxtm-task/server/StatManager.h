@@ -1,7 +1,10 @@
+///////////////////////////////////////////////////////////////////////////////
+//  Server statistics class.
+//
+
 #pragma once
 
 
-// @TODO: km 20160810 - add this as trait to Listener
 template<UINT t_nInterval = 1000>
 class ATL_NO_VTABLE CStatManager
 {

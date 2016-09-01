@@ -1,9 +1,19 @@
+///////////////////////////////////////////////////////////////////////////////
+//  Application base class.
+//
+#ifndef __APPHELP_H__
+#define __APPHELP_H__
 
 #pragma once
 
 
 // Application defines
-#define MSG_LEVEL           3 // verbosity level
+#ifdef _DEBUG
+#define MSG_LEVEL           3 // verbosity level (messages with level below are displayed)
+#else
+#define MSG_LEVEL           2 // verbosity level (messages with level below are displayed)
+#endif // _DEBUG
+
 
 #ifdef ERR
 #undef ERR
@@ -17,10 +27,10 @@
 #define ERR(_s_, ...)       _ftprintf_s(stderr, _s_, __VA_ARGS__)
 
 #define PAUSE(_s_) \
-    __pragma(warning(push)) \
-    __pragma(warning(disable : 4127)) \
-    do { _tprintf_s(_s_); _gettch(); } while (0) \
-    __pragma(warning(pop))
+        __pragma(warning(push)) \
+        __pragma(warning(disable : 4127)) \
+        do { _tprintf_s(_s_); _gettch(); } while (0) \
+        __pragma(warning(pop))
 
 
 // Windows socket defaults
@@ -29,7 +39,7 @@
 #define DEFAULT_ADDRESS     NULL            // loop-back interface
 #define DEFAULT_PORT        _T("40001")
 #define DEFAULT_EXTRA       0               // Number of "extra" bytes to send
-#define BUFFER_SIZE         64
+#define BUFFER_SIZE         128
 #define UNKNOWN_NAME        _T("<unknown>")
 
 #define MAX_ADDRSTRLEN      INET6_ADDRSTRLEN // NI_MAXHOST
@@ -63,11 +73,6 @@ public:
         , m_family(DEFAULT_FAMILY)
         , m_socktype(DEFAULT_SOCKTYPE)
         , m_buffsize(BUFFER_SIZE)
-        , m_clientid(0)
-        , m_interval(0)
-        , m_requests(0)
-        , m_worktime(0)
-        , m_bCircular(false)
         , m_bConnected(false)
     {
     };
@@ -78,8 +83,12 @@ public:
     // IExeModule
     int LoadPreferences(int argc, LPTSTR argv[])
     {
+#ifdef _CONSOLE
+        _tsetlocale(0 /* LC_ALL */, _T(".OCP"));
+#endif // _CONSOLE
+
         T* pT = static_cast<T*>(this);
-        int err = pT->ReadConfig(argv[0]);
+        int err = pT->ReadConfig();
 
         if (err != ERROR_SUCCESS) return err;
 
@@ -103,7 +112,7 @@ public:
 
 protected:
     // helper methods
-    int DisplayError(LPCTSTR msg, int err) throw()
+    int DisplayError(LPCTSTR msg, int err = ::WSAGetLastError()) throw()
     {
         return Log::Error(msg, err);
     }
@@ -116,27 +125,38 @@ protected:
 
         MSG(0, _T("usage: %s [-f 4|6] [-p port] [-s addr] [-t udp|tcp] [-b size]"), (LPCTSTR)name);
 #ifdef _CLIENT_BUILD_ // client only parameters
-        MSG(0, _T(" [-n number] [-d ticks] [-i id] [-w time]\n"));
+        MSG(0, _T(" [-n number] [-d ticks] [-i id] [-w time]"));
 #endif
-#ifdef _SERVER_BUILD_ // server only parameters
-        MSG(0, _T(" [-c]\n"));
-#endif
-        MSG(0, _T("  -f 4|6     Address family, 4 = IPv4, 6 = IPv6 [default: both]\n"));
-        MSG(0, _T("  -p port    Port number [default: %s]\n"), DEFAULT_PORT);
-        MSG(0, _T("  -s addr    Server ip address [default: INADDR_ANY,INADDR6_ANY]\n"));
-        MSG(0, _T("  -t tcp|udp Transport protocol to use [default: UDP]\n"));
-        MSG(0, _T("  -b size    Buffer size for send/recv [default: %u]\n"), BUFFER_SIZE);
-
+        MSG(0, _T("\n"));
+        MSG(0, _T("  -f 4|6     Address family, 4 = IPv4, 6 = IPv6 (default: both)\n"));
+        MSG(0, _T("  -p port    Port number (default: %s)\n"), DEFAULT_PORT);
+        MSG(0, _T("  -s addr    Server ip address (default: INADDR_ANY,INADDR6_ANY)\n"));
+        MSG(0, _T("  -t tcp|udp Transport protocol to use (default: UDP)\n"));
+        MSG(0, _T("  -b size    Buffer size for send/recv (default: %u)\n"), BUFFER_SIZE);
 #ifdef _CLIENT_BUILD_ // client only parameters
-        MSG(0, _T("  -n number  Number of sends to perform. (default: infinite)\n"));
+        MSG(0, _T("  -n number  Number of requests to perform. (default: 1, 0 - infinite)\n"));
         MSG(0, _T("  -d ticks   Delay in ms between server requests. (default: 0)\n"));
         MSG(0, _T("  -i id      Unique client id\n"));
         MSG(0, _T("  -w time    Working time in seconds. (default: 0)\n"));
 #endif
-#ifdef _SERVER_BUILD_ // server only parameters
-        MSG(0, _T("  -c         Circular queueing enabled (UDP).\n"));
-#endif
         return ERROR_INVALID_PARAMETER;
+    }
+
+    LPCTSTR PStr(int type) const throw()
+    {
+        return (type == SOCK_DGRAM) ? _T("UDP") : _T("TCP");
+    }
+    LPCTSTR FStr(int family) const throw()
+    {
+        switch (family)
+        {
+        case AF_INET:
+            return _T("AF_INET");
+        case AF_INET6:
+            return _T("AF_INET6");
+        default:
+            return _T("AF_UNSPEC");
+        }
     }
 
 
@@ -144,18 +164,26 @@ protected:
 
     bool GetIniFile(CPath& path) throw()
     {
-        path.RenameExtension(_T(".ini"));
-
-        return !!path.FileExists();
+        TCHAR buf[_MAX_PATH] = {0};
+        if (::GetModuleFileName(NULL, buf, _MAX_PATH))
+        {
+            path = buf;
+            path.RenameExtension(_T(".ini"));
+            return !!path.FileExists();
+        }
+        return false;
     }
 
-    int ReadConfig(LPTSTR /*arg0*/) throw()
+    int ReadConfig(void) throw()
     {
         return ERROR_SUCCESS;
     }
 
     int ParseArgs(int argc, LPTSTR argv[])
     {
+        T* pT = static_cast<T*>(this);
+        DBG_UNREFERENCED_LOCAL_VARIABLE(pT);
+
         for (int i = 1; i < argc; ++i)
         {
             TCHAR c = argv[i][0];
@@ -207,7 +235,7 @@ protected:
                 return DisplayHelp(argv[0]);
 
             case 'b':
-                if (i < argc && argv[i][0] != _T('-') && argv[i][0] != _T('/'))
+                if (i < argc)
                 {
                     int n = _tstoi(argv[i]);
                     if (errno == 0)
@@ -217,52 +245,47 @@ protected:
                 }
                 return DisplayHelp(argv[0]);
 
-#ifdef _SERVER_BUILD_ // server only parameters
-            case 'c':
-                m_bCircular = true;
-                break;
-#endif
 #ifdef _CLIENT_BUILD_ // client only parameters
             case 'd':
-                if (i < argc && argv[i][0] != _T('-') && argv[i][0] != _T('/'))
+                if (i < argc)
                 {
                     int n = _tstoi(argv[i]);
                     if (errno == 0)
                     {
-                        m_interval = n; break;
+                        pT->m_delaytik = n; break;
                     }
                 }
                 return DisplayHelp(argv[0]);
 
             case 'i':
-                if (i < argc && argv[i][0] != _T('-') && argv[i][0] != _T('/'))
+                if (i < argc)
                 {
                     int n = _tstoi(argv[i]);
                     if (errno == 0)
                     {
-                        m_clientid = n; break;
+                        pT->m_clientid = n; break;
                     }
                 }
                 return DisplayHelp(argv[0]);
 
             case 'n':
-                if (i < argc && argv[i][0] != _T('-') && argv[i][0] != _T('/'))
+                if (i < argc)
                 {
                     int n = _tstoi(argv[i]);
                     if (errno == 0)
                     {
-                        m_requests = n; break;
+                        pT->m_requests = n; break;
                     }
                 }
                 return DisplayHelp(argv[0]);
 
             case 'w':
-                if (i < argc && argv[i][0] != _T('-') && argv[i][0] != _T('/'))
+                if (i < argc)
                 {
                     int n = _tstoi(argv[i]);
                     if (errno == 0)
                     {
-                        m_worktime = n; break;
+                        pT->m_worktime = n; break;
                     }
                 }
                 return DisplayHelp(argv[0]);
@@ -281,22 +304,14 @@ protected:
 
 
 protected:
+    bool m_bConnected;
+
     CString m_addr;
     CString m_port;
 
     int m_family;
     int m_socktype;
     int m_buffsize;
-    //
-    int m_clientid;
-    int m_interval; // delay between requests (client)
-    int m_requests;
-    int m_worktime; // total working time (client)
-
-    bool m_bCircular; // server
-    bool m_bConnected;
-    // @KLUDGE: km 20160723 - TCP only..
-    UINT m_MaxConnect; // maximum concurrent connections
 
 private:
 
@@ -337,7 +352,12 @@ public:
         LPTSTR buf = NULL;
         DWORD lcid = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
         DWORD flag = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER;
-        if (::FormatMessage(flag, NULL, (DWORD)err, lcid, (LPTSTR)&buf, 0, NULL)) { str = buf; }
+        if (::FormatMessage(flag, NULL, (DWORD)err, lcid, (LPTSTR)&buf, 0, NULL))
+        {
+            str = buf;
+            str.Remove(_T('\n'));
+            str.Remove(_T('\r'));
+        }
 
         if (buf) { ::LocalFree(buf); }
 
@@ -347,7 +367,7 @@ public:
     static int Error(LPCTSTR msg, int err) throw()
     {
         CString s;
-        ERR(_T("%s error code=%i : %s\n"), msg, err, Error(err, s));
+        ERR(_T("%s error code=%i : \"%s\"\n\n"), msg, err, Error(err, s));
         return err;
     }
 };
@@ -365,13 +385,15 @@ public:
         // causes the calling process to ignore CTRL+C input
         ::SetConsoleCtrlHandler(m_pHR, TRUE);
     }
-    CCtrlHandler(PHANDLER_ROUTINE handler)
+    CCtrlHandler(PHANDLER_ROUTINE handler, bool bWarn = true)
         : m_pHR(handler)
     {
         ::SetConsoleCtrlHandler(m_pHR, TRUE);
-#ifdef _DEBUG
-        MSG(0, _T("\n** Press Ctrl+C to terminate\n\n"));
-#endif
+
+        if (bWarn)
+        {
+            MSG(0, _T("\n** Press Ctrl+C to terminate\n\n"));
+        }
     }
     virtual ~CCtrlHandler()
     {
@@ -386,7 +408,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // 
 // @WARNING: reading of aligned field is atomic. synchronization is not required.
-// Intel 325462, 8.1.1 Guaranteed Atomic Operations
+// see Intel 325462, 8.1.1 Guaranteed Atomic Operations
 
 class CQuit
 {
@@ -397,7 +419,54 @@ public:
     static void set(void) throw() { ms_bQuit = true; }
 
 private:
-    static bool volatile ms_bQuit;
+    static bool ms_bQuit;
 };
 
-__declspec(selectany) bool volatile CQuit::ms_bQuit = false;
+__declspec(selectany) bool CQuit::ms_bQuit = false;
+
+
+#ifndef _CHRONO_
+#include <chrono>
+#endif
+
+#ifndef _RANDOM_
+#include <random>
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////
+// generates uniformly distributed random integer values in the range [0-1023]
+//
+
+class RandomGenerator
+{
+    static const int M = KEY_MAXIMUM;
+public:
+    RandomGenerator()
+        : distribution(0, M)
+        , generator((int)std::chrono::system_clock::now().time_since_epoch().count())
+    {
+    }
+
+    int number(void) throw()
+    {
+        return distribution(generator);
+    }
+    int lo(void) const
+    {
+        return distribution.a();
+    }
+    int hi(void) const
+    {
+        return distribution.b();
+    }
+
+private:
+    std::default_random_engine generator;
+    std::uniform_int_distribution<int> distribution;
+};
+
+
+
+#endif // __APPHELP_H__
+

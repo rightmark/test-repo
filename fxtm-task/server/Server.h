@@ -41,6 +41,8 @@ public:
     }
     long Disconnect(void) throw()
     {
+        ERR(_T("\nTerminated: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
+
         return ERROR_SUCCESS;
     }
     long IoControl(long, bool) throw()
@@ -65,18 +67,9 @@ protected:
         return Log::Error(msg, err);
     }
 
-    // overridables
-
-    UINT ThreadProc(void) throw() // @TODO: km 20160825 - remove!
+    LPCTSTR FStr(int family) const throw()
     {
-        return ERROR_SUCCESS;
-    }
-
-protected:
-    static UINT WINAPI _ThreadProc(void* pv)
-    {
-        T* pT = static_cast<T*>(pv);
-        return pT->ThreadProc();
+        return (family == AF_INET) ? _T("AF_INET") : _T("AF_INET6");
     }
 
 private:
@@ -109,6 +102,8 @@ public:
 #ifdef _DEBUG
         MSG(0, _T("Greetings from TCP Server!\n\n"));
 #endif
+        ERR(_T("\nStarted: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
+
         if (!CreateWorkers()) return errno; // cannot start threads
 
         int idx = 0;
@@ -156,8 +151,7 @@ public:
                 socket.Detach(); // prevent closing..
                 idx++;
 
-                LPCTSTR pF = (pai->ai_family == AF_INET) ? _T("AF_INET") : _T("AF_INET6");
-                MSG(0, _T("Listening: port %u, protocol TCP, family %s\n"), ntohs(SS_PORT(pai->ai_addr)), pF);
+                MSG(0, _T("Listening: port %u, (TCP, %s)\n"), ntohs(SS_PORT(pai->ai_addr)), FStr(pai->ai_family));
             }
 
         } // for()
@@ -165,7 +159,7 @@ public:
         if (idx == 0)
         {
             ERR(_T("Fatal error: unable to serve on any address.\n"));
-            return -1; // WSANO_DATA ??
+            return ERROR_FATAL_APP_EXIT;
         }
 
         return ERROR_SUCCESS; WSA_E_NO_MORE;
@@ -187,11 +181,11 @@ protected:
         {
             m_worker.push_back(new CWorkThreadTcp);
 
-            if (!m_worker[i]->Create()) return false;
+            if (!m_worker[i]->Create(false)) return false;
         }
         m_listener.SetWorkers(m_worker);
 
-        return m_listener.Create();
+        return m_listener.Create(true);
     }
 
 
@@ -228,8 +222,9 @@ public:
 #ifdef _DEBUG
         MSG(0, _T("Greetings from UDP Server!\n\n"));
 #endif
+        ERR(_T("\nStarted: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
 
-        if (!m_worker.Create()) return errno; // cannot start thread
+        if (!m_worker.Create(false)) return errno; // cannot start thread
 
         int idx = 0;
         for (; pai != NULL; pai = pai->ai_next)
@@ -282,8 +277,7 @@ public:
                 socket.Detach(); // prevent closing..
                 idx++;
 
-                LPCTSTR pF = (pai->ai_family == AF_INET) ? _T("AF_INET") : _T("AF_INET6");
-                MSG(0, _T("Listening: port %u, protocol UDP, family %s\n"), ntohs(SS_PORT(pai->ai_addr)), pF);
+                MSG(0, _T("Listening: port %u, (UDP, %s)\n"), ntohs(SS_PORT(pai->ai_addr)), FStr(pai->ai_family));
             }
 
         } // for()

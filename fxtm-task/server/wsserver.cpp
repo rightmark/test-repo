@@ -26,7 +26,10 @@ class CExeModule
     static const DWORD WORKER_WAIT  = 50;
 
 public:
-    CExeModule() : m_pServer(NULL)
+    CExeModule()
+        : m_bCircular(false)
+        , m_MaxConnect(MAXIMUM_WAIT_OBJECTS)
+        , m_pServer(NULL)
     {
         m_bWorker = (++ms_instcnt > 0);
     }
@@ -62,9 +65,13 @@ public:
                     m_bConnected = true;
                 }
             }
+            catch (int e)
+            {
+                err = DisplayError(_T("Connect() failed."), e);
+            }
             catch (std::bad_alloc& e)
             {
-                ERR(_T("bad_alloc caught: %S\n"), e.what()); // !! ASCII
+                ERR(_T("bad_alloc caught: %s\n"), (LPCTSTR)CString(e.what()));
                 err = ERROR_OUTOFMEMORY;
             }
         }
@@ -87,6 +94,7 @@ public:
         }
         return ERROR_SUCCESS;
     }
+
     int Run(void) throw()
     {
         int err = ERROR_SUCCESS;
@@ -122,9 +130,9 @@ public:
         return m_bWorker;
 #endif
     }
-    bool BackupTaskState(LPTSTR arg0) throw()
+    bool BackupTaskState(void) throw()
     {
-        CPath path(arg0);
+        CPath path;
         bool bRet = false;
 
         if (GetIniFile(path))
@@ -154,10 +162,14 @@ public:
         si.cb = sizeof(si);
         // Create worker process.
         return (::CreateProcess(NULL, ::GetCommandLine(), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi) != 0);
-        // @TODO: km 20160824 - parse the command line and run dedicated processes for each protocol (family)..
+        // @TODO: km 20160824 - parse the command line and run dedicated processes for each protocol (family).
+        // surviving assistance scheme must be reworked for multiple workers..
     }
     bool WatchWorkerProcess(PROCESS_INFORMATION& pi) throw()
     {
+        // Set Ctrl+C, Ctrl+Break handler
+        CCtrlHandler ctrl(_CtrlHandler, false);
+
         LONG watchtickcnt = ms_tickcnt; // remember worker process ticks
 
         while (::WaitForSingleObject(pi.hProcess, WATCHER_WAIT) != WAIT_OBJECT_0)
@@ -167,6 +179,7 @@ public:
             {
                 break;
             }
+
             if (ms_tickcnt != watchtickcnt)
             {
                 watchtickcnt = ms_tickcnt;
@@ -192,16 +205,17 @@ public:
 public:
     // overridables
 
-    int ReadConfig(LPTSTR arg0) throw()
+    int ReadConfig(void) throw()
     {
-        CPath path(arg0);
+        CPath path;
 
         if (GetIniFile(path))
         {
             int f = ::GetPrivateProfileInt(_T("server"), _T("family"), 0, path);
             m_family = (f == 4)? AF_INET : (f == 6)? AF_INET6 : DEFAULT_FAMILY;
 
-            m_bCircular = !!::GetPrivateProfileInt(_T("server"), _T("circular"), 0, path);
+            m_bCircular  = !!::GetPrivateProfileInt(_T("server"), _T("circular"), 0, path);
+            m_MaxConnect = ::GetPrivateProfileInt(_T("server"), _T("maxconnect"), m_MaxConnect, path);
 
             CString buf;
 
@@ -259,7 +273,12 @@ protected:
 
     static BOOL WINAPI _CtrlHandler(DWORD /*type*/)
     {
-        MSG(0, _T("\nStop signaled. Terminating...\n"));
+        // @TRICKY: reset instance counter to zero..
+        if (InterlockedCompareExchange(&ms_instcnt, 0, ms_instcnt) > 0)
+        {
+            // to avoid ICP race condition
+            MSG(0, _T("\nStop signaled. Terminating...\n"));
+        }
         CQuit::set();
 
         return TRUE;
@@ -267,10 +286,14 @@ protected:
 
 
 protected:
-    IServer* m_pServer;
 
 private:
     bool m_bWorker;
+    bool m_bCircular;   // the oldest message in the queue should be eliminated in order to accommodate
+                        // the newly arrived message. (UDP server)
+    UINT m_MaxConnect;  // maximum concurrent connections (TCP server)
+
+    IServer* m_pServer;
 
     static long volatile ms_instcnt;
     static long volatile ms_tickcnt; // worker process ticks
@@ -303,15 +326,20 @@ int _tmain(int argc, LPTSTR argv[])
     }
     else
     {
-        _Module.BackupTaskState(argv[0]);
-
-        PROCESS_INFORMATION pi = {0};
-
-        do 
+        // check for help request or errors..
+        nRet = _Module.LoadPreferences(argc, argv);
+        if (nRet == ERROR_SUCCESS)
         {
-            if (!_Module.CreateWorkerProcess(pi)) { nRet = -1; break; }
+            _Module.BackupTaskState();
 
-        } while (!_Module.WatchWorkerProcess(pi));
+            PROCESS_INFORMATION pi = { 0 };
+
+            do
+            {
+                if (!_Module.CreateWorkerProcess(pi)) { nRet = -1; break; }
+
+            } while (!_Module.WatchWorkerProcess(pi));
+        }
 
         return nRet;
     }
@@ -330,14 +358,17 @@ int _tmain(int argc, LPTSTR argv[])
             _Module.Disconnect();
         }
     }
-    catch (int n) { nRet = n; }
+    catch (int e)
+    {
+        nRet = CLog::Error(_T("Server failed."), e);
+    }
     catch (std::exception& e)
     {
-        ERR(_T("exception caught: %S\n"), e.what()); // !! ASCII
+        ERR(_T("Exception caught: %s\n"), (LPCTSTR)CString(e.what()));
     }
     catch (...)
     {
-        ERR(_T("exception caught: unspecified\n"));
+        ERR(_T("Exception caught: unspecified.\n"));
     }
 
 #ifdef _DEBUG

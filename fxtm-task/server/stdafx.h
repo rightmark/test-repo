@@ -20,11 +20,10 @@
 #pragma warning(disable : 4127)
 #include <atlpath.h>
 
-//#include <atlapp.h>
 #include <atlfile.h>
 #include <atlsync.h>
+#include <atltime.h>
 
-// TODO: reference additional headers your program requires here
 
 #include <ws2tcpip.h>
 #include <mstcpip.h>

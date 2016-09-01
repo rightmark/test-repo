@@ -8,6 +8,25 @@ class ATL_NO_VTABLE CTransmitBase
     : public CStatManager<STAT_INTERVAL>
     , public CQuit
 {
+protected:
+#include <pshpack1.h>
+    typedef union tag_buf {
+        char buffer[8];     // raw data
+        struct tag_pkg
+        {
+            UINT16 anchor;  // must be 0xffff
+            UINT16 keyval;  // key value (0-1023)
+            UINT32 result;
+        } pkg;
+    } DATABOXT, *LPDATABOXT;
+#include <poppack.h>
+
+    static const USHORT ANCHOR = 0xffff;
+
+    static const int
+        DATABOX_SIZE_READ = 4,
+        DATABOX_SIZE_SEND = 8;
+
 public:
     int ReadData(CSocketAsync& s) throw()
     {
@@ -56,13 +75,9 @@ public:
         for (;;)
         {
             // TCP does NOT maintain message boundaries, we may recv() the client's data grouped differently than it was sent.
-            // Since all this server does is echo the data it receives back to the client, we don't need to concern ourselves
-            // about message boundaries. But it does mean that the message data we print for a particular recv() below may
-            // contain more or less data than was contained in a particular client send().
-            //
 
-            int cb = recv(s, buf, sizeof(buf), 0);
-            if (cb == SOCKET_ERROR)
+            int cbRead = recv(s, buf, sizeof(buf), 0);
+            if (cbRead == SOCKET_ERROR)
             {
                 if ((err = ::WSAGetLastError()) != WSAEWOULDBLOCK)
                 {
@@ -71,54 +86,73 @@ public:
                 break;
             }
 
-            bytes += cb;
+            bytes += cbRead;
 
-            if (cb == 0)
+            if (cbRead == 0)
             {
                 MSG(1, _T("recv() returned zero. Client closed connection.\n"));
                 break;
             }
-            else
-            {
-                ReadDataStat(cb);
-            }
+
+            ReadDataStat(cbRead);
 
             LPSOCKADDR from = NULL;
 
-            err = s.NameInfo(&from, hostname, sizeof(hostname));
+            err = s.NameInfo(&from, hostname, _countof(hostname));
             if (err != NO_ERROR)
             {
                 DisplayError(_T("CSocketAsync.NameInfo() failed."), err);
                 _tcscpy_s(hostname, _countof(hostname), UNKNOWN_NAME);
             }
 
-            CString str(buf, cb);
-            MSG(1, _T("recv bytes=%i, port=%u: %s, from %s\n"), cb, ntohs(SS_PORT(from)), (LPCTSTR)str, hostname);
+            LPDATABOXT box = (LPDATABOXT)buf;
 
-#if 0
-            cb = send(s, buf, cb, 0);
-            if (cb == SOCKET_ERROR)
+            while (DATABOX_SIZE_READ <= cbRead && box->pkg.anchor == ANCHOR)
             {
-                DisplayError(_T("send() failed."));
+                ULONG result = 0;
+                USHORT key = htons(box->pkg.keyval);
+
+                if (key <= KEY_MAXIMUM)
+                {
+                    MSG(1, _T("recv bytes=%i, key=%u, port=%u, from %s\n"), bytes, key, ntohs(SS_PORT(from)), hostname);
+
+                    result = GetResult(key);
+                }
+
+                box->pkg.result = ntohl(result);
+
+                int cbSent = send(s, box->buffer, DATABOX_SIZE_SEND, 0);
+                if (cbSent == SOCKET_ERROR)
+                {
+                    DisplayError(_T("send() failed."));
+                }
+                else
+                {
+                    SentDataStat(cbSent);
+                }
+
+                ++box; cbRead -= DATABOX_SIZE_READ;
             }
-            else
+
+            if (cbRead > 0)
             {
-                SentDataStat(cb);
+                CString str(box->buffer, cbRead);
+                MSG(1, _T("recv bytes=%i, port=%u: %s, from %s\n"), cbRead, ntohs(SS_PORT(from)), (LPCTSTR)str, hostname);
+
+                int cbSent = send(s, box->buffer, cbRead, 0);
+                if (cbSent == SOCKET_ERROR)
+                {
+                    DisplayError(_T("send() failed."));
+                }
+                else
+                {
+                    SentDataStat(cbSent);
+                }
+
             }
-#endif
+
         } // for()
 
-        bytes = send(s, buf, bytes, 0);
-        if (bytes == SOCKET_ERROR)
-        {
-            DisplayError(_T("send() failed."));
-        }
-        else
-        {
-            SentDataStat(bytes);
-        }
-
-        // @TODO: km 20160810 - write code..
         return bytes;
     }
     int SendData(CSocketAsync& /*s*/) throw()
@@ -166,38 +200,46 @@ public:
             DisplayError(_T("recvfrom() failed."));
             return bytes;
         }
+
         if (bytes == 0)
         {
             // Actually, this should never happen on an unconnected socket..
             MSG(1, _T("recvfrom() returned zero, aborting\n"));
             return bytes;
         }
-        else
-        {
-            ReadDataStat(bytes);
-        }
 
-        int err = ::GetNameInfo((LPSOCKADDR)&from, fromlen, hostname, sizeof(hostname), NULL, 0, NI_NUMERICHOST);
+        ReadDataStat(bytes);
+
+        int err = ::GetNameInfo((LPSOCKADDR)&from, fromlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST);
         if (err != NO_ERROR)
         {
             DisplayError(_T("GetNameInfo() failed."), err);
             _tcscpy_s(hostname, _countof(hostname), UNKNOWN_NAME);
         }
 
-        CString str(buf, bytes);
-        MSG(1, _T("recv bytes=%i, port=%u: %s, from %s\n"), bytes, ntohs(SS_PORT(&from)), (LPCTSTR)str, hostname);
-        //MSG(_T("Echoing same data back to client\n"));
-
-#if 1 // @KLUDGE: km 20160822 - testing..
+        if (DATABOX_SIZE_READ == bytes && ((LPDATABOXT)buf)->pkg.anchor == ANCHOR)
         {
-            static short val = 0;
+            DATABOXT& box = *(LPDATABOXT)buf;
+            ULONG result = 0;
+            USHORT key = htons(box.pkg.keyval);
 
-            UINT result = GetResult(++val & 1023);
-            MSG(0, _T("random=%u, average=%u\n"), val, result);
+            if (key <= KEY_MAXIMUM)
+            {
+                MSG(1, _T("recv bytes=%i, key=%u, port=%u, from %s\n"), bytes, key, ntohs(SS_PORT(&from)), hostname);
+
+                result = GetResult(key);
+            }
+
+            box.pkg.result = ntohl(result);
+            bytes = DATABOX_SIZE_SEND;
         }
-#endif
+        else
+        {
+            CString str(buf, bytes);
+            MSG(1, _T("recv bytes=%i, port=%u: %s, from %s\n"), bytes, ntohs(SS_PORT(&from)), (LPCTSTR)str, hostname);
+        }
 
-        bytes = sendto(s, buf, bytes, 0, (LPSOCKADDR)&from, fromlen); //WSASendTo();
+        bytes = sendto(s, buf, bytes, 0, (LPSOCKADDR)&from, fromlen);
         if (bytes == SOCKET_ERROR)
         {
             DisplayError(_T("sendto() failed."), err);

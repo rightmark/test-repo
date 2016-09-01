@@ -24,7 +24,7 @@ protected:
 public:
     CWorkThreadBase()
         : m_nConnUsed(0)
-        , m_hThread(NULL)
+        , m_h(NULL)
     {
         ATLTRACE(_T("CWorkThreadBase.ctor()\n"));
     }
@@ -36,31 +36,36 @@ public:
     // methods
     bool Accept(SOCKET s) throw()
     {
-        if (m_hThread != NULL)
+        if (m_h != NULL)
         {
-            AutoLock _(m_cs); // @TODO: km 20160816 - TBD..
+            AutoLock _(m_cs);
 
             if (HasPlace())
             {
                 m_ConnPending.push_back(s);
+                // Checks the suspend count of the thread. If the suspend count is zero, the thread is not currently suspended.
+                // Otherwise, the subject thread's suspend count is decremented. If the resulting value is zero,
+                // then the execution of the subject thread is resumed.
+                ::ResumeThread(m_h);
+
                 return true;
             }
         }
         return false;
     }
-    bool Create(void) throw()
+    bool Create(bool bRun) throw()
     {
-        if (m_hThread == NULL)
+        if (m_h == NULL)
         {
-            m_hThread = (HANDLE)_beginthreadex(NULL, 0, _ThreadProc, this, 0, NULL);
+            m_h = (HANDLE)_beginthreadex(NULL, 0, _ThreadProc, this, bRun ? 0 : CREATE_SUSPENDED, NULL);
         }
-        return (NULL != m_hThread);
+        return (NULL != m_h);
     }
 
     bool HasPlace(void) const throw()
     {
         // @WARNING: reading of aligned field is atomic. synchronization is not required.
-        // Intel 325462, 8.1.1 Guaranteed Atomic Operations
+        // see Intel 325462, 8.1.1 Guaranteed Atomic Operations
         return (NUM_CONNECTIONS > (m_nConnUsed + m_ConnPending.size())) ;
     }
 
@@ -83,7 +88,7 @@ public:
                 continue;
             }
 
-            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, (WSAEVENT*)&m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
+            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, (LPWSAEVENT)&m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
 
             if (idx == WSA_WAIT_FAILED)
             {
@@ -175,7 +180,7 @@ protected:
 
     bool AcceptHelper(LONG events) throw()
     {
-        AutoLock _(m_cs); // @TODO: km 20160816 - TBD..
+        AutoLock _(m_cs);
 
         if (m_ConnPending.empty()) return false;
 
@@ -239,13 +244,14 @@ public:
 protected:
     UINT m_nConnUsed; // number of connected sockets
 
+    // good for memory usage
     std::list<SOCKET> m_ConnPending;
 
     CSocketAsync m_arrSockets[NUM_CONNECTIONS];
     CSocketEvent m_sockEvents[NUM_CONNECTIONS];
 
 private:
-    HANDLE m_hThread;
+    HANDLE m_h; // thread handle
 
     AutoCriticalSection m_cs;
 };
@@ -266,10 +272,7 @@ public:
 public:
     // overridables
 
-    void Destroy(void) throw()
-    {
-        delete this;
-    }
+    void Destroy(void) throw() { delete this; }
 
 private:
 };
@@ -318,7 +321,6 @@ public:
     {
         ATLTRACE(_T(">> Listener thread run (%p)\n"), this);
 
-        // @TODO: km 20160822 - add Listener code.. Stat code..
         while (CQuit::run())
         {
             LONG events = FD_ACCEPT|FD_CLOSE/*|FD_CONNECT*/;
@@ -329,7 +331,7 @@ public:
                 continue;
             }
 
-            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, (WSAEVENT*)&m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
+            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, (LPWSAEVENT)&m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
   
             if (idx == WSA_WAIT_FAILED)
             {
@@ -381,7 +383,7 @@ public:
                     continue;
                 }
 
-                err = ::GetNameInfo((LPSOCKADDR)&from, fromlen, hostname, sizeof(hostname), NULL, 0, NI_NUMERICHOST);
+                err = ::GetNameInfo((LPSOCKADDR)&from, fromlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST);
                 if (err != NO_ERROR)
                 {
                     DisplayError(_T("GetNameInfo() failed."), err);
@@ -390,26 +392,28 @@ public:
                 MSG(0, _T("Accepted connection from %s, port %u\n"), hostname, ntohs(SS_PORT(&from)));
 
                 TWorkerList& worker = *m_worker;
-                vector<CWorkThreadTcp*>::const_iterator it = worker.begin();
-                for (; it != worker.end(); ++it)
+                bool bFound = false;
+                const int tries = 9; // @TODO: km 20160901 - TBD..
+
+                for (int i = 0; i < tries && !bFound; ++i)
                 {
-                    if ((*it)->Accept(ConnSock))
+                    for (const auto& it : worker)
                     {
-                        AddConnStat(); // statistics..
-                        break; // free worker slot found..
+                        if (it->Accept(ConnSock))
+                        {
+                            bFound = true; break; // free worker found..
+                        }
+                    }
+
+                    if (!bFound) // free worker not found
+                    {
+                        worker.push_back(new CWorkThreadTcp);
+
+                        worker.back()->Create(false);
                     }
                 }
 
-                if (it == worker.end()) // free slot not found
-                {
-                    worker.push_back(new CWorkThreadTcp);
-
-                    CWorkThreadTcp* w = worker.back();
-                    if (w->Create() && w->Accept(ConnSock))
-                    {
-                        AddConnStat(); // statistics..
-                    }
-                }
+                if (bFound) { AddConnStat(); } // statistics.. 
 
             } 
             else if (ne.lNetworkEvents & FD_CLOSE)

@@ -16,11 +16,10 @@
 
 #pragma warning(disable : 4127)
 #include <atlpath.h>
+#include <atltime.h>
 
-//#include <atlapp.h>
-
-// TODO: reference additional headers your program requires here
 
 #include <ws2tcpip.h>
+#include <mstcpip.h>
 
 #include "wsahelper.h"
