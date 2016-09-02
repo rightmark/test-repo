@@ -82,16 +82,16 @@ public:
     {
         if (m_bConnected)
         {
-            if (m_pServer && m_pServer->Disconnect() == ERROR_SUCCESS)
+            if (m_pServer->Disconnect() == ERROR_SUCCESS)
             {
-                m_pServer->Destroy();
-
                 m_bConnected = false;
             }
 #ifdef _DEBUG
             ::Sleep(100);
 #endif
         }
+        if (m_pServer) { m_pServer->Destroy(); m_pServer = NULL; }
+
         return ERROR_SUCCESS;
     }
 

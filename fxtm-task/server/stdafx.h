@@ -9,6 +9,7 @@
 
 // STL
 #include <exception>
+#include <memory>
 #include <vector>
 #include <list>
 #include <map>

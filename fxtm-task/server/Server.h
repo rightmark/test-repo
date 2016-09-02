@@ -27,11 +27,11 @@ class ATL_NO_VTABLE CServerBase
 public:
     CServerBase()
     {
-        ATLTRACE(_T("CServer.ctor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CServer.ctor()\n"));
     }
     ~CServerBase() throw()
     {
-        ATLTRACE(_T("CServer.dtor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CServer.dtor()\n"));
     }
 
     // IServer
@@ -96,11 +96,11 @@ class CServerTcp : public CServerBase<CServerTcp, CLog>
 public:
     CServerTcp() : m_MaxSockCnt(MAXIMUM_CONCURRENT_CONNECTIONS)
     {
-        ATLTRACE(_T("CServerTcp.ctor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CServerTcp.ctor()\n"));
     }
     ~CServerTcp() throw()
     {
-        ATLTRACE(_T("CServerTcp.dtor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CServerTcp.dtor()\n"));
     }
 
     // IServer
@@ -185,22 +185,33 @@ protected:
         size_t m = CWorkThreadTcp::MaxConnections();
         size_t n = (m > 0)? ((m_MaxSockCnt + m - 1) / m) : 1;
 
-        for (size_t i = 0; i < n; ++i)
+        try
         {
-            m_worker.push_back(move(new CWorkThreadTcp));
+            m_worker.reserve(n * 2);
+            m_worker.resize(n);
 
-            if (!m_worker[i]->Create(false)) return false;
+            for (size_t i = 0; i < n; ++i)
+            {
+                m_worker.emplace_back(new CWorkThreadTcp);
+
+                if (!m_worker.back()->Create(false)) return false;
+            }
+            m_listener.SetWorkers(m_worker);
+
+            return m_listener.Create(true);
         }
-        m_listener.SetWorkers(m_worker);
-
-        return m_listener.Create(true);
+        catch (std::bad_alloc& e)
+        {
+            ERR(_T("[ServerTcp] bad_alloc caught: %s\n"), (LPCTSTR)CString(e.what()));
+        }
+        return false;
     }
 
 
 public:
+
+    CListenThread::TWorkerList m_worker;
     CListenThread m_listener;
-    // @WARNING: worker objects are self-destructive
-    std::vector<CWorkThreadTcp*> m_worker;
 
 private:
     size_t m_MaxSockCnt; // maximum concurrent connections
@@ -216,11 +227,11 @@ public:
     CServerUdp()
         : m_bCircular(false)
     {
-        ATLTRACE(_T("CServerUdp.ctor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CServerUdp.ctor()\n"));
     }
     ~CServerUdp() throw()
     {
-        ATLTRACE(_T("CServerUdp.dtor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CServerUdp.dtor()\n"));
     }
 
     // IServer

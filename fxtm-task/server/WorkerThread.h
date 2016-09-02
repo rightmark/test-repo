@@ -12,7 +12,9 @@ using namespace WSA;
 
 
 template <class T, class Transmit, DWORD t_N = WSA_MAXIMUM_WAIT_EVENTS>
-class ATL_NO_VTABLE CWorkThreadBase : public Transmit
+class ATL_NO_VTABLE CWorkThreadBase
+    : public Transmit
+    , public CQuit
 {
     typedef ATL::CComAutoCriticalSection AutoCriticalSection;
     typedef ATL::CComCritSecLock<AutoCriticalSection> AutoLock;
@@ -26,11 +28,14 @@ public:
         : m_nConnUsed(0)
         , m_h(NULL)
     {
-        ATLTRACE(_T("CWorkThreadBase.ctor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.ctor()\n"));
     }
     ~CWorkThreadBase() throw()
     {
-        ATLTRACE(_T("CWorkThreadBase.dtor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.dtor()\n"));
+
+        T* pT = static_cast<T*>(this);
+        pT->Destroy();
     }
 
     // methods
@@ -199,6 +204,16 @@ protected:
 
         return true;
     }
+    void ShutThread(void) throw()
+    {
+        while (m_h != NULL)
+        {
+            if (CQuit::run()) { CQuit::set(); }
+
+            ::ResumeThread(m_h);
+            ::Sleep(1); // give others a chance..
+        }
+    }
 
 private:
     bool Remove(UINT n) throw()
@@ -230,7 +245,9 @@ private:
     static UINT WINAPI _ThreadProc(void* pv)
     {
         T* pT = static_cast<T*>(pv);
-        UINT uRet = pT->ThreadProc(); pT->Destroy();
+        UINT uRet = pT->ThreadProc();
+
+        pT->m_h = NULL; // Zed's dead..
 
         return uRet;
     }
@@ -262,17 +279,17 @@ class CWorkThreadTcp : public CWorkThreadBase<CWorkThreadTcp, CTransmitTcp>
 public:
     CWorkThreadTcp()
     {
-        ATLTRACE(_T("CWorkThreadTcp.ctor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadTcp.ctor()\n"));
     }
     ~CWorkThreadTcp() throw()
     {
-        ATLTRACE(_T("CWorkThreadTcp.dtor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadTcp.dtor()\n"));
     }
 
 public:
     // overridables
 
-    void Destroy(void) throw() { delete this; }
+    void Destroy(void) throw() { ShutThread(); }
 
 private:
 };
@@ -283,11 +300,11 @@ class CWorkThreadUdp : public CWorkThreadBase<CWorkThreadUdp, CTransmitUdp, 2/*F
 public:
     CWorkThreadUdp()
     {
-        ATLTRACE(_T("CWorkThreadUdp.ctor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadUdp.ctor()\n"));
     }
     ~CWorkThreadUdp() throw()
     {
-        ATLTRACE(_T("CWorkThreadUdp.dtor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadUdp.dtor()\n"));
     }
 
 private:
@@ -296,20 +313,21 @@ private:
 
 class CListenThread : public CWorkThreadBase<CListenThread, CTransmitTcp, 2/*FD_SETSIZE*/>
 {
-    typedef std::vector<CWorkThreadTcp*> TWorkerList;
+    friend class CServerTcp;
+    typedef std::vector<unique_ptr<CWorkThreadTcp>> TWorkerList;
 
 public:
-    CListenThread()
+    CListenThread() : m_worker(NULL)
     {
-        ATLTRACE(_T("CListenThread.ctor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CListenThread.ctor()\n"));
     }
     ~CListenThread() throw()
     {
-        ATLTRACE(_T("CListenThread.dtor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CListenThread.dtor()\n"));
     }
 
     // methods
-    void SetWorkers(std::vector<CWorkThreadTcp*>& worker) throw()
+    void SetWorkers(TWorkerList& worker) throw()
     {
         m_worker = &worker;
     }
@@ -391,31 +409,42 @@ public:
                 }
                 MSG(0, _T("Accepted connection from %s, port %u\n"), hostname, ntohs(SS_PORT(&from)));
 
-                TWorkerList& worker = *m_worker;
-                bool bFound = false;
-                const int tries = 9; // @TODO: km 20160901 - TBD..
-
-                for (int i = 0; i < tries && !bFound; ++i)
+                try
                 {
-                    for (const auto& it : worker)
+                    TWorkerList& worker = *m_worker;
+                    bool bFound = false;
+                    const int tries = 9; // @TODO: km 20160901 - TBD..
+
+                    for (int i = 0; i < tries && !bFound; ++i)
                     {
-                        if (it->Accept(ConnSock))
+                        for (const auto& it : worker)
                         {
-                            bFound = true; break; // free worker found..
+                            if (it->Accept(ConnSock))
+                            {
+                                bFound = true; break; // free worker found..
+                            }
+                        }
+
+                        if (!bFound) // free worker not found
+                        {
+                            worker.emplace_back(new CWorkThreadTcp);
+
+                            worker.back()->Create(false);
                         }
                     }
 
-                    if (!bFound) // free worker not found
-                    {
-                        worker.push_back(move(new CWorkThreadTcp));
-
-                        worker.back()->Create(false);
-                    }
+                    if (bFound) { AddConnStat(); } // statistics.. 
+                }
+                catch (std::bad_alloc& e)
+                {
+                    ERR(_T("[Listener] bad_alloc caught: %s\n"), (LPCTSTR)CString(e.what()));
+                }
+                catch (...)
+                {
+                    ERR(_T("[Listener] unspecified exception.\n"));
                 }
 
-                if (bFound) { AddConnStat(); } // statistics.. 
-
-            } 
+            }
             else if (ne.lNetworkEvents & FD_CLOSE)
             {
                 MSG(1, _T("FD_CLOSE event fired (listener)\n"));

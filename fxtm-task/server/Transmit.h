@@ -4,9 +4,7 @@
 
 
 template <class T, class Log = CLog>
-class ATL_NO_VTABLE CTransmitBase
-    : public CStatManager<STAT_INTERVAL>
-    , public CQuit
+class ATL_NO_VTABLE CTransmitBase : public CStatManager<STAT_INTERVAL>
 {
 protected:
 #include <pshpack1.h>
