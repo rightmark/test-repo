@@ -11,6 +11,11 @@ using namespace WSA;
 #include "Transmit.h"
 
 
+#ifdef DEBUG
+__declspec(selectany) LONG g_cnt = 0;
+#endif // DEBUG
+
+
 template <class T, class Transmit, DWORD t_N = WSA_MAXIMUM_WAIT_EVENTS>
 class ATL_NO_VTABLE CWorkThreadBase
     : public Transmit
@@ -28,11 +33,11 @@ public:
         : m_nConnUsed(0)
         , m_h(NULL)
     {
-        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.ctor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.ctor() [%i]\n"), ++g_cnt);
     }
     ~CWorkThreadBase() throw()
     {
-        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.dtor()\n"));
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.dtor() [%i]\n"), --g_cnt);
 
         T* pT = static_cast<T*>(this);
         pT->Destroy();
@@ -313,11 +318,10 @@ private:
 
 class CListenThread : public CWorkThreadBase<CListenThread, CTransmitTcp, 2/*FD_SETSIZE*/>
 {
-    friend class CServerTcp;
     typedef std::vector<unique_ptr<CWorkThreadTcp>> TWorkerList;
 
 public:
-    CListenThread() : m_worker(NULL)
+    CListenThread()
     {
         ATLTRACE(atlTraceRefcount, 0, _T("CListenThread.ctor()\n"));
     }
@@ -327,9 +331,25 @@ public:
     }
 
     // methods
-    void SetWorkers(TWorkerList& worker) throw()
+    bool SetWorkers(size_t n) throw()
     {
-        m_worker = &worker;
+        try
+        {
+            m_worker.reserve(n * 2);
+
+            for (size_t i = 0; i < n; ++i)
+            {
+                m_worker.emplace_back(new CWorkThreadTcp);
+
+                if (!m_worker.back()->Create(false)) return false;
+            }
+        }
+        catch (std::bad_alloc& e)
+        {
+            ERR(_T("[Listener] bad_alloc caught: %s\n"), (LPCTSTR)CString(e.what()));
+            return false;
+        }
+        return true;
     }
 
 public:
@@ -411,13 +431,14 @@ public:
 
                 try
                 {
-                    TWorkerList& worker = *m_worker;
+                    TWorkerList& w = m_worker;
+
                     bool bFound = false;
-                    const int tries = 9; // @TODO: km 20160901 - TBD..
+                    const int tries = 4; // @TODO: km 20160901 - TBD..
 
                     for (int i = 0; i < tries && !bFound; ++i)
                     {
-                        for (const auto& it : worker)
+                        for (const auto& it : w)
                         {
                             if (it->Accept(ConnSock))
                             {
@@ -427,9 +448,9 @@ public:
 
                         if (!bFound) // free worker not found
                         {
-                            worker.emplace_back(new CWorkThreadTcp);
+                            w.emplace_back(new CWorkThreadTcp);
 
-                            worker.back()->Create(false);
+                            w.back()->Create(false);
                         }
                     }
 
@@ -468,7 +489,7 @@ public:
     }
 
 private:
-    TWorkerList* m_worker;
+    TWorkerList m_worker;
 };
 
 

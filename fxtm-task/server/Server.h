@@ -2,7 +2,7 @@
 
 // tweaks
 #define _USE_REUSEADDR
-
+#define _LOG_CONNECTIONS
 
 
 #include "StatManager.h"
@@ -178,6 +178,13 @@ public:
         return ERROR_SUCCESS;
     }
 
+    // methods
+
+    void SetMaxConnections(size_t maxconn) throw()
+    {
+        if (maxconn > 0) { m_MaxSockCnt = maxconn; }
+    }
+
 protected:
     // helper methods
     bool CreateWorkers(void) throw()
@@ -185,32 +192,15 @@ protected:
         size_t m = CWorkThreadTcp::MaxConnections();
         size_t n = (m > 0)? ((m_MaxSockCnt + m - 1) / m) : 1;
 
-        try
+        if (m_listener.SetWorkers(n))
         {
-            m_worker.reserve(n * 2);
-            m_worker.resize(n);
-
-            for (size_t i = 0; i < n; ++i)
-            {
-                m_worker.emplace_back(new CWorkThreadTcp);
-
-                if (!m_worker.back()->Create(false)) return false;
-            }
-            m_listener.SetWorkers(m_worker);
-
             return m_listener.Create(true);
-        }
-        catch (std::bad_alloc& e)
-        {
-            ERR(_T("[ServerTcp] bad_alloc caught: %s\n"), (LPCTSTR)CString(e.what()));
         }
         return false;
     }
 
 
 public:
-
-    CListenThread::TWorkerList m_worker;
     CListenThread m_listener;
 
 private:

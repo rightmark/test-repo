@@ -41,7 +41,7 @@ class CExeModule
     static const DWORD
         CLIENT_WAIT   = 10, // ms
         CLOSE_TIMEOUT = 5000,
-        RX_TIMEOUT    = 60000;
+        RX_TIMEOUT    = 10000;
 
 public:
     CExeModule()
@@ -171,15 +171,12 @@ public:
                     return DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
                 }
             }
+            m_ConnSocket.Close();
+            m_ev.Close();
 
             m_bConnected = false;
 
             ERR(_T("\nTerminated: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
-
-            if (m_bPause)
-            {
-                PAUSE(_T("\npress a key to exit...\n"));
-            }
         }
 
         return ERROR_SUCCESS;
@@ -206,7 +203,6 @@ public:
         // So, it's possible to use send() and recv() on datagram sockets, instead of recvfrom() and sendto().
         //
 
-        DATABOXT box;
         UINT64 tick = 0;
 
         if (m_worktime > 0)
@@ -217,15 +213,20 @@ public:
 
         for (int i = 0; !m_requests || i < m_requests; ++i)
         {
-            char buf[BUFFER_SIZE] = {0};
-
             // compose a message to send.
+            DATABOXT box;
             box.pkg.anchor = ANCHOR;
             box.pkg.keyval = ntohs((USHORT)m_rg.number());
 
-            if (SendData(box.buffer, DATABOX_SIZE_SEND, RX_TIMEOUT) == SOCKET_ERROR) break;
+            int len = DATABOX_SIZE_SEND;
 
-            if (ReadData(buf, sizeof(buf), RX_TIMEOUT) == 0) break;
+            if ((err = SendData(box.buffer, len, RX_TIMEOUT)) == ERROR_TIMEOUT) continue;
+            if (err != ERROR_SUCCESS) break; // reconnect ??
+
+            char buf[BUFFER_SIZE] = {0};
+            len = sizeof(buf);
+
+            if ((err = ReadData(buf, len, RX_TIMEOUT)) != ERROR_SUCCESS) break; // reconnect ?
 
             LPDATABOXT pbox = (LPDATABOXT)buf;
             if (pbox->pkg.keyval != box.pkg.keyval)
@@ -247,14 +248,19 @@ public:
 
         } // for ()
 
-        MSG(0, _T("Done sending\n"));
         m_ConnSocket.Shutdown(SD_SEND);
 
         // Since TCP does not preserve message boundaries, there may still be more data arriving from the server.
         // So we continue to receive data until the server closes the connection.
         //
         if (m_socktype == SOCK_STREAM)
-            while (ReadData(box.buffer, sizeof(box), RX_TIMEOUT) != 0);
+        {
+            char buf[BUFFER_SIZE] = {0};
+            int len = sizeof(buf);
+
+            while (ReadData(buf, len, RX_TIMEOUT) == ERROR_SUCCESS);
+        }
+        MSG(0, _T("Done sending\n"));
 
         return err;
     }
@@ -394,81 +400,86 @@ protected:
         return ERROR_SUCCESS;
     }
 
-    int SendData(const char* buf, int bytes, DWORD timeout) throw()
+    int SendData(const char* buf, int& len, DWORD timeout) throw()
     {
         UINT64 tick = ::GetTickCount64() + timeout;
 
         while (CQuit::run())
         {
-            int cb = send(m_ConnSocket, buf, bytes, 0);
-            if (cb != SOCKET_ERROR && cb == bytes)
+            int bytes = send(m_ConnSocket, buf, len, 0);
+            if (bytes != SOCKET_ERROR && bytes == len)
             {
                 LPDATABOXT box = (LPDATABOXT)buf;
-                MSG(0, _T("Sent %i bytes, key=%u\n"), cb, htons(box->pkg.keyval));
+                MSG(0, _T("Sent %i bytes, key=%u\n"), bytes, htons(box->pkg.keyval));
 
-                SentMoreData(cb); // statistics..
-                return cb;
+                SentMoreData(bytes); // statistics..
+                break; // success
             }
 
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
             {
-                DisplayError(_T("send() failed."));
-                break;
+                len = 0;
+                return DisplayError(_T("send() failed."));
             }
-            ::Sleep(CLIENT_WAIT);
 
-            if (tick < ::GetTickCount64()) break;
+            if (tick < ::GetTickCount64())
+                return ERROR_TIMEOUT;
+
+            ::Sleep(CLIENT_WAIT);
         }
 
-        return SOCKET_ERROR;
+        return ERROR_SUCCESS;
     }
 
-    int ReadData(char* buf, int bytes, int timeout) throw()
+    int ReadData(char* buf, int& len, int timeout) throw()
     {
         UINT64 tick = ::GetTickCount64() + timeout;
 
         do 
         {
-            int cb = recv(m_ConnSocket, buf, bytes, 0);
-            if (cb != SOCKET_ERROR)
+            int bytes = recv(m_ConnSocket, buf, len, 0);
+            if (bytes != SOCKET_ERROR)
             {
-                bytes = cb;
+                len = bytes;
                 // We are not likely to see this with UDP, since there is no 'connection' established. 
-                if (cb == 0)
+                if (bytes == 0)
                 {
                     MSG(0, _T("Server closed connection\n"));
+                    return SOCKET_ERROR;
                 }
                 else
                 {
-                    while (DATABOX_SIZE_READ <= cb && ((LPDATABOXT)buf)->pkg.anchor == ANCHOR)
+                    while (DATABOX_SIZE_READ <= bytes && ((LPDATABOXT)buf)->pkg.anchor == ANCHOR)
                     {
                         DATABOXT& box = *(LPDATABOXT)buf;
                         MSG(0, _T("Received: key=%u, result=%u\n"), htons(box.pkg.keyval), htonl(box.pkg.result));
 
-                        buf += cb; cb -= DATABOX_SIZE_READ;
+                        buf += bytes; bytes -= DATABOX_SIZE_READ;
                     }
-                    if (cb > 0)
+                    if (bytes > 0)
                     {
-                        CString str(buf, cb);
-                        MSG(0, _T("Received %i bytes from server: \"%s\"\n"), cb, (LPCTSTR)str);
+                        CString str(buf, bytes);
+                        MSG(0, _T("Received %i bytes from server: \"%s\"\n"), bytes, (LPCTSTR)str);
                     }
-                    ReadMoreData(bytes); // statistics..
+                    ReadMoreData(len); // statistics..
                 }
-                return bytes;
+                break; // success
             }
 
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
             {
-                DisplayError(_T("recv() failed."));
-                break;
+                len = 0;
+                return DisplayError(_T("recv() failed."));
             }
-            ::Sleep(CLIENT_WAIT);
 
-            if (tick < ::GetTickCount64()) break;
+            if (tick < ::GetTickCount64())
+                return ERROR_TIMEOUT;
+
+            ::Sleep(CLIENT_WAIT);
 
         } while (CQuit::run());
 
-        return SOCKET_ERROR;
+        return ERROR_SUCCESS;
     }
 
     bool GetConfigString(CString& buf, LPCTSTR path, LPCTSTR key, LPCTSTR dflt = 0, LPCTSTR app = _T("client")) throw()
@@ -498,14 +509,14 @@ protected:
 
 
 public:
+    bool m_bPause;      // "press any key" on exit..
+
     int m_clientid;
     int m_requests;
     int m_delaytik;     // delay between requests, ms (client)
     int m_worktime;     // total working time, s (client)
 
 private:
-    bool m_bPause;      // "press any key" on exit..
-
     CSocketAsync m_ConnSocket;
     CSocketEvent m_ev;
 
@@ -528,11 +539,16 @@ int _tmain(int argc, LPTSTR argv[])
         {
             CWsaInitialize _;
 
-            if (_Module.Connect() == ERROR_SUCCESS)
+            do 
             {
-                nRet = _Module.Run();
-            }
-            _Module.Disconnect();
+                nRet = _Module.Connect();
+                if (nRet == ERROR_SUCCESS)
+                {
+                    nRet = _Module.Run();
+                }
+                _Module.Disconnect();
+
+            } while (nRet == ERROR_TIMEOUT);
         }
     }
     catch (int e)
@@ -546,6 +562,11 @@ int _tmain(int argc, LPTSTR argv[])
     catch (...)
     {
         ERR(_T("Exception caught: unspecified.\n"));
+    }
+
+    if (_Module.m_bPause)
+    {
+        PAUSE(_T("\npress a key to exit...\n"));
     }
 
     return nRet;
