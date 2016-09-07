@@ -14,23 +14,23 @@ public:
 
     UINT AddConnStat(void) throw()
     {
-        InterlockedIncrement(&ms_nDirty);
+        InterlockedIncrementNoFence(&ms_nDirty);
         return InterlockedIncrement(&ms_ConnCount);
     }
     UINT DelConnStat(void) throw()
     {
-        InterlockedIncrement(&ms_nDirty);
+        InterlockedIncrementNoFence(&ms_nDirty);
         return InterlockedDecrement(&ms_ConnCount);
     }
 
     void ReadMoreData(UINT64 add) throw()
     {
-        InterlockedIncrement(&ms_nDirty);
+        InterlockedIncrementNoFence(&ms_nDirty);
         InterlockedExchangeAdd(&ms_BytesRead, add);
     }
     void SentMoreData(UINT64 add) throw()
     {
-        InterlockedIncrement(&ms_nDirty);
+        InterlockedIncrementNoFence(&ms_nDirty);
         InterlockedExchangeAdd(&ms_BytesSent, add);
     }
     bool DisplayData(void) throw()
@@ -43,7 +43,7 @@ public:
         UINT64 tick = ::GetTickCount64();
         LONG chgcnt = ms_nDirty;
 
-        if (chgcnt && tick > lasttick)
+        if (chgcnt > 0 && tick > lasttick)
         {
             if (ms_ConnCount < (UINT)-1) // @WARNING: no connections available for datagrams..
             {
@@ -84,7 +84,7 @@ public:
 
             lasttick = tick + t_nInterval;
 
-            InterlockedExchangeAdd(&ms_nDirty, -chgcnt);
+            InterlockedExchangeAddNoFence(&ms_nDirty, -chgcnt);
 
             return true;
         }
@@ -107,16 +107,16 @@ private:
 
 };
 
-template <UINT t> LONG volatile CStatManager<t>::ms_nDirty(0);
+template<UINT t> LONG volatile CStatManager<t>::ms_nDirty(0);
 
-template <UINT t> UINT64 volatile CStatManager<t>::ms_BytesRead(0);
-template <UINT t> UINT64 volatile CStatManager<t>::ms_BytesSent(0);
-template <UINT t> UINT32 volatile CStatManager<t>::ms_ConnCount(0);
+template<UINT t> UINT64 volatile CStatManager<t>::ms_BytesRead(0);
+template<UINT t> UINT64 volatile CStatManager<t>::ms_BytesSent(0);
+template<UINT t> UINT32 volatile CStatManager<t>::ms_ConnCount(0);
 
 // @WARNING: Why not std::atomic ??
 // Well, using (count).atomic::operator++() instead of InterlockedIncrement(&count) we get (for Visual C++ implementation)
 // atomic_fetch_add_explicit(&count, 1, memory_order_seq_cst)) with the most strict memory order by default.
 // Ok, the memory order is no matter for Intel x86 processors, but finally we get
 // one instruction lock inc[rcx] (4 bytes + lock) for InterlockedIncrement() vs
-// two instructions mov eax, 1 ; lock xadd [rcx] (5 bytes each + lock) for std::atomic.
+// two instructions mov eax, 1 ; lock xadd [rcx], eax (5 bytes each + lock) for std::atomic.
 // Sometimes it's matter..

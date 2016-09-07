@@ -57,7 +57,7 @@ private:
 
 };
 
-template <UINT t> LONG volatile CStatManager<t>::ms_nDirty(0);
+template<UINT t> LONG volatile CStatManager<t>::ms_nDirty(0);
 
-template <UINT t> UINT64 volatile CStatManager<t>::ms_BytesRead(0);
-template <UINT t> UINT64 volatile CStatManager<t>::ms_BytesSent(0);
+template<UINT t> UINT64 volatile CStatManager<t>::ms_BytesRead(0);
+template<UINT t> UINT64 volatile CStatManager<t>::ms_BytesSent(0);

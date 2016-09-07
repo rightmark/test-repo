@@ -36,9 +36,6 @@
     <ClInclude Include="..\common\wsahelper.h">
       <Filter>Header Files\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\common\targetver.h">
-      <Filter>Header Files\common</Filter>
-    </ClInclude>
     <ClInclude Include="StatManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>

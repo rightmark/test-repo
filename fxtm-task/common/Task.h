@@ -1,14 +1,34 @@
 #pragma once
 
 
+//////////////////////////////////////////////////////////////////////////
+// Purpose:
+// Create a client-server application for Windows.
+//
+// Algorithm:
+// - Clients send to the server random integer numbers from 0 to 1023. 
+// - The server receives and stores these numbers in a binary tree using them as unique keys. 
+// - Upon a client's request, the average of squares of the numbers including the newly received number is calculated
+//   and sent back to the client as a response.
+// - A client receives this value and generates a new random number and then again sends it to the server and so on.
+// - Every N seconds store all the items from the binary tree into a file in the binary format
+//
+// Tests:
+// - Output all the processes into console and the application's log file.
+// - Run about 20-30 clients and keep the program working about 10-20 minutes.
+//
+
+
+
+#ifdef _SERVER_BUILD_
+
+// Singleton object
 
 class CTask
 {
     typedef ATL::CComAutoCriticalSection AutoCriticalSection;
     typedef ATL::CComCritSecLock<AutoCriticalSection> AutoLock;
 
-    // 23.4.7.1 multiset supports equivalent keys (possibly contains multiple copies of the same key value)
-    // so, map is preferable..
     typedef std::map<SHORT, UINT> TStorage;
 
     static const size_t STORAGE_SIZE = (KEY_MAXIMUM + 1);
@@ -28,6 +48,7 @@ public:
         , m_bQuit(false)
         , m_interval(INTERVAL_INI)
         , m_bRequiresSave(false)
+        , m_h(NULL)
     {}
 
     ~CTask() throw() { Terminate(); }
@@ -72,7 +93,9 @@ public:
                     ATLTRACE(_T("CTask.LoadState(\"%s\")\n"), (LPCTSTR)m_file);
                 }
             }
-            bRet = (_beginthreadex(NULL, 0, _ThreadProc, this, 0, NULL) != 0);
+
+            m_h = (HANDLE)_beginthreadex(NULL, 0, _ThreadProc, this, 0, NULL);
+            bRet = (NULL != m_h);
         }
         return bRet;
     }
@@ -131,6 +154,11 @@ public:
     void Terminate(void) throw()
     {
         m_bQuit = true;
+
+        if (NULL != m_h)
+        {
+            ::WaitForSingleObject(m_h, INFINITE); m_h = NULL;
+        }
     }
 
 
@@ -181,12 +209,15 @@ protected:
     UINT32 m_count;
 
     TStorage m_data;
-    CString m_file;     // task state storage file name
+    CString m_file; // task state storage file name
 
 private:
     bool volatile m_bQuit;
     bool volatile m_bRequiresSave;
-    UINT volatile m_interval;   // data saving interval in seconds
+
+    UINT volatile m_interval; // data saving interval in seconds
+
+    HANDLE m_h; // thread handle
 
     AutoCriticalSection m_cs;
 };
@@ -209,3 +240,35 @@ public:
     CTask& get_Task(void) const { return CFactorySingleton<CTask>::Instance(); }
 
 };
+
+// server specific
+static const int
+    DATABOX_SIZE_READ = 4,
+    DATABOX_SIZE_SEND = 8;
+
+#endif // _SERVER_BUILD_
+
+#ifdef _CLIENT_BUILD_
+
+// client specific
+static const int
+    DATABOX_SIZE_READ = 8,
+    DATABOX_SIZE_SEND = 4;
+
+#endif // _CLIENT_BUILD_
+
+// common
+static const USHORT ANCHOR = 0xffff;
+
+#include <pshpack1.h>
+typedef union tag_buf {
+    char buffer[8];     // raw data
+    struct tag_pkg
+    {
+        UINT16 anchor;  // must be 0xffff
+        UINT16 keyval;  // key value (0-1023)
+        UINT32 result;
+    } pkg;
+} DATABOXT, *LPDATABOXT;
+#include <poppack.h>
+

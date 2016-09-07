@@ -11,8 +11,10 @@
 #include <chrono>
 #include <random>
 
+#define NOMINMAX                            // use min/max from STL instead
 #define WIN32_LEAN_AND_MEAN
-#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // some CString constructors will be explicit
+
+#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS  // some CString constructors will be explicit
 
 #pragma warning(disable : 4127)
 #include <atlpath.h>

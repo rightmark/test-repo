@@ -3,28 +3,9 @@
 
 
 
-template <class T, class Log = CLog>
+template<class T, class Log = CLog>
 class ATL_NO_VTABLE CTransmitBase : public CStatManager<STAT_INTERVAL>
 {
-protected:
-#include <pshpack1.h>
-    typedef union tag_buf {
-        char buffer[8];     // raw data
-        struct tag_pkg
-        {
-            UINT16 anchor;  // must be 0xffff
-            UINT16 keyval;  // key value (0-1023)
-            UINT32 result;
-        } pkg;
-    } DATABOXT, *LPDATABOXT;
-#include <poppack.h>
-
-    static const USHORT ANCHOR = 0xffff;
-
-    static const int
-        DATABOX_SIZE_READ = 4,
-        DATABOX_SIZE_SEND = 8;
-
 public:
     int ReadData(CSocketAsync& s) throw()
     {
@@ -57,8 +38,8 @@ protected:
 private:
 };
 
-class CTransmitTcp
-    : public CTransmitBase<CTransmitTcp>
+class CTransmitTcpSimple
+    : public CTransmitBase<CTransmitTcpSimple>
     , public CTaskProxy
 {
 public:
@@ -176,8 +157,8 @@ public:
     }
 };
 
-class CTransmitUdp
-    : public CTransmitBase<CTransmitUdp>
+class CTransmitUdpSimple
+    : public CTransmitBase<CTransmitUdpSimple>
     , public CTaskProxy
 {
 public:
@@ -256,3 +237,15 @@ public:
     }
 };
 
+// @TODO: km 20160907 - write code..
+class CTransmitTcpBuffered
+{
+public:
+
+private:
+};
+
+
+
+typedef CTransmitTcpSimple CTransmitTcp;
+typedef CTransmitUdpSimple CTransmitUdp;

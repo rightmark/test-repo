@@ -157,12 +157,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\apphelper.h" />
-    <ClInclude Include="..\common\targetver.h" />
+    <ClInclude Include="..\common\Task.h" />
     <ClInclude Include="..\common\wsahelper.h" />
     <ClInclude Include="Server.h" />
     <ClInclude Include="StatManager.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="Task.h" />
     <ClInclude Include="Transmit.h" />
     <ClInclude Include="WorkerThread.h" />
   </ItemGroup>

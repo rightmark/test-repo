@@ -11,6 +11,7 @@ using namespace std;
 using namespace WSA;
 
 #include "StatManager.h"
+#include "Task.h"
 
 
 // CExeModule
@@ -20,23 +21,6 @@ class CExeModule
     , public CStatManager<STAT_INTERVAL>
     , public CQuit
 {
-#include <pshpack1.h>
-    typedef union tag_buf {
-        char buffer[8];     // raw data
-        struct tag_pkg
-        {
-            UINT16 anchor;  // must be 0xffff
-            UINT16 keyval;  // key value (0-1023)
-            UINT32 result;
-        } pkg;
-    } DATABOXT, *LPDATABOXT;
-#include <poppack.h>
-
-    static const USHORT ANCHOR = 0xffff;
-
-    static const int
-        DATABOX_SIZE_READ = 8,
-        DATABOX_SIZE_SEND = 4;
 
     static const DWORD
         CLIENT_WAIT   = 10, // ms
@@ -194,6 +178,10 @@ public:
             return DisplayError(_T("CSocketEvent.Create() failed."));
         }
 
+#if 0
+        return RunAsync();
+#endif
+
         m_ConnSocket.SelectEvents(m_ev, /*FD_READ | FD_WRITE |*/ FD_CLOSE);
 
         // @WARNING: Notice that nothing in this code is specific to whether we are using UDP or TCP.
@@ -308,7 +296,62 @@ public:
 protected:
     // helper methods
 
+    int RunAsync(void) throw()
+    {
+        if (!m_ConnSocket.SelectEvents(m_ev, FD_READ | FD_WRITE | FD_CLOSE))
+        {
+            return DisplayError(_T("CSocketAsync.SelectEvents() failed."));
+        }
+
+        for (;;)
+        {
+            DWORD idx = ::WSAWaitForMultipleEvents(1, (LPWSAEVENT)&m_ev, FALSE, RX_TIMEOUT, FALSE);
+
+            if (idx == WSA_WAIT_FAILED)
+            {
+                return DisplayError(_T("WSAWaitForMultipleEvents() failed."));
+            }
+            else if (idx == WSA_WAIT_TIMEOUT)
+            {
+                return ERROR_TIMEOUT;
+            }
+
+            WSANETWORKEVENTS ne = { 0 };
+            if (!m_ConnSocket.EnumEvents(m_ev, &ne))
+            {
+                return DisplayError(_T("CSocketAsync.EnumEvents() failed."));
+            }
+
+            if (ne.lNetworkEvents & FD_READ)
+            {
+                MSG(1, _T("FD_READ event fired\n"));
+
+                if (ne.iErrorCode[FD_READ_BIT] != 0)
+                {
+                    return DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);
+                }
+
+                // @TODO: km 20160906 - write code..
+
+            }
+            else if (ne.lNetworkEvents & FD_WRITE)
+            {
+                MSG(1, _T("FD_WRITE event fired\n"));
+
+                if (ne.iErrorCode[FD_WRITE_BIT] != 0)
+                {
+                    return DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
+                }
+
+                // @TODO: km 20160906 - write code..
+            }
+
+        } // for ()
+
+        return ERROR_SUCCESS;
+    }
     // @TODO: km 20160831 - work-flow should be detailed
+#if 0
     int SendDataAsync(const char* buf, int& len, DWORD timeout) throw()
     {
 
@@ -354,8 +397,10 @@ protected:
 
         return ERROR_SUCCESS;
     }
+#endif
 
     // @TODO: km 20160831 - work-flow should be detailed
+#if 0
     int ReadDataAsync(char* buff, int& len, DWORD timeout) throw()
     {
 
@@ -399,6 +444,7 @@ protected:
 
         return ERROR_SUCCESS;
     }
+#endif
 
     int SendData(const char* buf, int& len, DWORD timeout) throw()
     {

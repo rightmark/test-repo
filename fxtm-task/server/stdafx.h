@@ -8,15 +8,17 @@
 #include "targetver.h"
 
 // STL
+#include <algorithm>
 #include <exception>
 #include <memory>
 #include <vector>
 #include <list>
 #include <map>
 
-
+#define NOMINMAX                            // use min/max from STL instead
 #define WIN32_LEAN_AND_MEAN
-#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // some CString constructors will be explicit
+
+#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS  // some CString constructors will be explicit
 
 #pragma warning(disable : 4127)
 #include <atlpath.h>

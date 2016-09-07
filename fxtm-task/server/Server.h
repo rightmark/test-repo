@@ -19,7 +19,7 @@ __interface IServer
 };
 
 
-template <class T, class Log>
+template<class T, class Log>
 class ATL_NO_VTABLE CServerBase
     : public CStatManager<STAT_INTERVAL>
     , public IServer

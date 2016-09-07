@@ -11,12 +11,8 @@ using namespace WSA;
 #include "Transmit.h"
 
 
-#ifdef DEBUG
-__declspec(selectany) LONG g_cnt = 0;
-#endif // DEBUG
 
-
-template <class T, class Transmit, DWORD t_N = WSA_MAXIMUM_WAIT_EVENTS>
+template<class T, class Transmit, DWORD t_N = WSA_MAXIMUM_WAIT_EVENTS>
 class ATL_NO_VTABLE CWorkThreadBase
     : public Transmit
     , public CQuit
@@ -33,11 +29,11 @@ public:
         : m_nConnUsed(0)
         , m_h(NULL)
     {
-        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.ctor() [%i]\n"), ++g_cnt);
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.ctor()\n"));
     }
     ~CWorkThreadBase() throw()
     {
-        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.dtor() [%i]\n"), --g_cnt);
+        ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.dtor()\n"));
 
         T* pT = static_cast<T*>(this);
         pT->Destroy();
@@ -125,6 +121,7 @@ public:
             else if (ne.lNetworkEvents & FD_CLOSE)
             {
                 MSG(1, _T("FD_CLOSE event fired\n"));
+
                 if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
                 {
                     DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
@@ -138,6 +135,8 @@ public:
             } 
             else if (ne.lNetworkEvents & FD_READ)
             {
+                MSG(1, _T("FD_READ event fired\n"));
+
                 if (ne.iErrorCode[FD_READ_BIT] != 0)
                 {
                     DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);

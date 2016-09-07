@@ -64,7 +64,7 @@ __interface IExeModule
 };
 
 
-template <class T, class Log>
+template<class T, class Log>
 class ATL_NO_VTABLE IExeModuleImpl : public IExeModule
 {
 public:
@@ -323,7 +323,7 @@ private:
 //////////////////////////////////////////////////////////////////////////
 // Helper classes
 
-template <class T>
+template<class T>
 class CFactorySingleton
 {
 protected:
@@ -338,7 +338,7 @@ public:
 
         return m_inst;
 #else
-    #error 'magic statics (§6.7 [stmt.dcl] p4) supported in  Visual C++ 14.0
+    #error 'magic statics (§6.7 [stmt.dcl] p4) supported in Visual C++ 14.0
 #endif
     }
 
@@ -426,6 +426,10 @@ private:
 __declspec(selectany) bool CQuit::ms_bQuit = false;
 
 
+
+#ifdef _CLIENT_BUILD_
+
+
 #ifndef _CHRONO_
 #include <chrono>
 #endif
@@ -453,13 +457,13 @@ public:
     {
         return distribution(generator);
     }
-    int lo(void) const
+    int min(void) const
     {
-        return distribution.a();
+        return distribution.min();
     }
-    int hi(void) const
+    int max(void) const
     {
-        return distribution.b();
+        return distribution.min();
     }
 
 private:
@@ -467,6 +471,8 @@ private:
     std::uniform_int_distribution<int> distribution;
 };
 
+
+#endif // _CLIENT_BUILD_
 
 
 #endif // __APPHELP_H__
