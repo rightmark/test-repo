@@ -213,6 +213,9 @@ public:
                 if (ReadDataAsync(box.buffer, len) == SOCKET_ERROR)
                     return SOCKET_ERROR;
 
+                if (DATABOX_SIZE_READ != len || box.pkg.anchor != ANCHOR)
+                    continue; // skip unsupported data
+
                 if (lkey != htons(box.pkg.keyval))
                 {
                     ERR(_T("Key mismatch: sent %u, received %u\n"), lkey, htons(box.pkg.keyval));
@@ -327,7 +330,7 @@ public:
 protected:
     // helper methods
 
-    int ReadDataAsync(char* buf, int len) throw()
+    int ReadDataAsync(char* buf, int& len) throw()
     {
         int bytes = recv(m_ConnSocket, buf, len, 0);
         if (bytes == SOCKET_ERROR)
@@ -363,6 +366,7 @@ protected:
                 str.Append(CString(buf, cb));
                 bytes += cb;
             }
+            len = bytes;
 
             MSG(0, _T("Received %i bytes: \"%s\"\n"), bytes, (LPCTSTR)str);
         }

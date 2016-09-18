@@ -2,7 +2,7 @@
 #pragma once
 
 // default response
-#define HELLO_STR   "Hello. Server version 1.0"
+#define HELLO_STR   "Hello. Rightmark server 1.0"
 
 
 template<class T, class Log = CLog>
@@ -307,7 +307,7 @@ public:
 
     int SendData(CSocketAsync& s) throw()
     {
-//         if (m_data.empty()) { return Hello(s); }
+        if (m_data.empty()) { return Hello(s); }
 
         while (!m_data.empty())
         {
