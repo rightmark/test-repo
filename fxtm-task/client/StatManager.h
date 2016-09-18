@@ -22,14 +22,14 @@ public:
         InterlockedIncrement(&ms_nDirty);
         InterlockedExchangeAdd(&ms_BytesSent, add);
     }
-    bool DisplayData(void) throw()
+    bool DisplayData(bool bForce) throw()
     {
         static UINT64 lasttick = 0;
 
         UINT64 tick = ::GetTickCount64();
         LONG chgcnt = ms_nDirty;
 
-        if (chgcnt && tick > lasttick)
+        if (bForce || (chgcnt > 0 && tick > lasttick))
         {
             MSG(0, _T("-> bytes read: %I64u\n"), ms_BytesRead);
             MSG(0, _T("<- bytes sent: %I64u\n"), ms_BytesSent);

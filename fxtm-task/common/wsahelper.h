@@ -187,6 +187,8 @@ private:
 //
 class CSocketEvent
 {
+    typedef const WSAEVENT *LPCWSAEVENT;
+
 public:
     CSocketEvent() throw() : m_h(NULL) {}
     CSocketEvent(CSocketEvent& h) throw() : m_h(NULL) // copy-ctor
@@ -210,6 +212,8 @@ public:
         return  *this;
     }
     operator WSAEVENT() const throw() { return m_h; }
+
+    operator LPCWSAEVENT() const throw() { return &m_h; }
 
     void Attach(WSAEVENT h) throw()
     {

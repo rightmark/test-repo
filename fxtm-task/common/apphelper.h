@@ -51,9 +51,6 @@
 
 
 
-// forward reference
-class CLog;
-
 
 __interface IExeModule
 {
@@ -238,10 +235,10 @@ protected:
             case 'b':
                 if (i < argc)
                 {
-                    int n = _tstoi(argv[i]);
+                    ULONG ul = _tcstoul(argv[i], 0, 0);
                     if (errno == 0)
                     {
-                        m_buffsize = n; break;
+                        m_buffsize = ul; break;
                     }
                 }
                 return DisplayHelp(argv[0]);
@@ -250,10 +247,10 @@ protected:
             case 'd':
                 if (i < argc)
                 {
-                    int n = _tstoi(argv[i]);
+                    ULONG ul = _tcstoul(argv[i], 0, 0);
                     if (errno == 0)
                     {
-                        pT->m_delaytik = n; break;
+                        pT->m_delaytik = ul; break;
                     }
                 }
                 return DisplayHelp(argv[0]);
@@ -261,10 +258,10 @@ protected:
             case 'i':
                 if (i < argc)
                 {
-                    int n = _tstoi(argv[i]);
+                    ULONG ul = _tcstoul(argv[i], 0, 0);
                     if (errno == 0)
                     {
-                        pT->m_clientid = n; break;
+                        pT->m_clientid = ul; break;
                     }
                 }
                 return DisplayHelp(argv[0]);
@@ -272,10 +269,10 @@ protected:
             case 'n':
                 if (i < argc)
                 {
-                    int n = _tstoi(argv[i]);
+                    ULONG ul = _tcstoul(argv[i], 0, 0);
                     if (errno == 0)
                     {
-                        pT->m_requests = n; break;
+                        pT->m_requests = (ul > 0) ? ul : (UINT_MAX - 1); break;
                     }
                 }
                 return DisplayHelp(argv[0]);
@@ -283,10 +280,10 @@ protected:
             case 'w':
                 if (i < argc)
                 {
-                    int n = _tstoi(argv[i]);
+                    ULONG ul = _tcstoul(argv[i], 0, 0);
                     if (errno == 0)
                     {
-                        pT->m_worktime = n; break;
+                        pT->m_worktime = ul; break;
                     }
                 }
                 return DisplayHelp(argv[0]);
@@ -368,7 +365,7 @@ public:
     static int Error(LPCTSTR msg, int err) throw()
     {
         CString s;
-        ERR(_T("%s error code=%i : \"%s\"\n\n"), msg, err, Error(err, s));
+        ERR(_T("\n** %s error code=%i : \"%s\"\n\n"), msg, err, Error(err, s));
         return err;
     }
 };
@@ -407,9 +404,9 @@ private:
 
 
 //////////////////////////////////////////////////////////////////////////
-// 
 // @WARNING: reading of aligned field is atomic. synchronization is not required.
 // see Intel 325462, 8.1.1 Guaranteed Atomic Operations
+// 
 
 class CQuit
 {
@@ -440,7 +437,7 @@ __declspec(selectany) bool CQuit::ms_bQuit = false;
 
 
 //////////////////////////////////////////////////////////////////////////
-// generates uniformly distributed random integer values in the range [0-1023]
+// Generates uniformly distributed random integer values in the range [0-1023]
 //
 
 class RandomGenerator

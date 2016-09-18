@@ -86,7 +86,7 @@ public:
 
         while (CQuit::run())
         {
-            LONG events = FD_CLOSE|FD_READ|FD_WRITE;
+            LONG events = (FD_CLOSE | FD_READ | FD_WRITE);
 
             if (m_nConnUsed < 1 && !AcceptHelper(events))
             {
@@ -94,7 +94,7 @@ public:
                 continue;
             }
 
-            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, (LPWSAEVENT)&m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
+            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
 
             if (idx == WSA_WAIT_FAILED)
             {
@@ -113,29 +113,15 @@ public:
             idx -= WSA_WAIT_EVENT_0;
 
             WSANETWORKEVENTS ne = {0};
+
             if (!m_arrSockets[idx].EnumEvents(m_sockEvents[idx], &ne))
             {
                 DisplayError(_T("CSocketAsync.EnumEvents() failed."));
                 continue;
             }
-            else if (ne.lNetworkEvents & FD_CLOSE)
-            {
-                MSG(1, _T("FD_CLOSE event fired\n"));
-
-                if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
-                {
-                    DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
-                    continue;
-                }
-                m_arrSockets[idx].Shutdown(SD_SEND);
-
-                Remove(idx);
-                DelConnStat(); // statistics..
-
-            } 
             else if (ne.lNetworkEvents & FD_READ)
             {
-                MSG(1, _T("FD_READ event fired\n"));
+                MSG(2, _T("FD_READ event fired\n"));
 
                 if (ne.iErrorCode[FD_READ_BIT] != 0)
                 {
@@ -143,36 +129,40 @@ public:
                     continue;
                 }
 
-                int cb = ReadData(m_arrSockets[idx]);
-                if (cb > 0)
+                if (ReadData(m_arrSockets[idx]) == SOCKET_ERROR)
                 {
-                    ;//Transmit::ReadDataStat(cb);
+                    Remove(idx);
                 }
-                else
-                {
-                    ;//Remove(idx);
-                }
-
             }
             else if (ne.lNetworkEvents & FD_WRITE)
             {
-                MSG(1, _T("FD_WRITE event fired\n"));
+                MSG(2, _T("FD_WRITE event fired\n"));
 
                 if (ne.iErrorCode[FD_WRITE_BIT] != 0)
                 {
-                    Transmit::DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
+                    DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
                     continue;
                 }
 
-                int cb = Transmit::SendData(m_arrSockets[idx]);
-                if (cb > 0)
+                if (SendData(m_arrSockets[idx]) == SOCKET_ERROR)
                 {
-                    ;//Transmit::SentDataStat(cb);
+                    Remove(idx);
                 }
-                else
+            }
+            else if (ne.lNetworkEvents & FD_CLOSE)
+            {
+                MSG(2, _T("FD_CLOSE event fired\n"));
+
+                if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
                 {
-                    ;//Remove(idx);
+                    DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
+
+                    WSAECONNRESET; // connection was reset by the remote side
+                    WSAECONNABORTED; // connection was terminated due to a time - out or other failure
                 }
+                m_arrSockets[idx].Shutdown(SD_SEND);
+
+                Remove(idx);
             }
 
         } // while()
@@ -242,6 +232,8 @@ private:
         m_nConnUsed = m;
 
         Unlock();
+
+        DelConnStat(); // statistics..
 
         return true;
     }
@@ -360,7 +352,7 @@ public:
 
         while (CQuit::run())
         {
-            LONG events = FD_ACCEPT|FD_CLOSE/*|FD_CONNECT*/;
+            LONG events = (FD_ACCEPT | FD_CLOSE/*|FD_CONNECT*/);
 
             if (m_nConnUsed < 1 && !AcceptHelper(events))
             {
@@ -368,7 +360,7 @@ public:
                 continue;
             }
 
-            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, (LPWSAEVENT)&m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
+            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
   
             if (idx == WSA_WAIT_FAILED)
             {
@@ -393,7 +385,7 @@ public:
                 DisplayError(_T("CSocketAsync.EnumEvents() failed."));
                 continue;
             }
-            if (ne.lNetworkEvents & FD_ACCEPT)
+            else if (ne.lNetworkEvents & FD_ACCEPT)
             {
                 if (ne.iErrorCode[FD_ACCEPT_BIT] != 0)
                 {

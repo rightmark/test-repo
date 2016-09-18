@@ -23,9 +23,9 @@ class CExeModule
 {
 
     static const DWORD
-        CLIENT_WAIT   = 10, // ms
-        CLOSE_TIMEOUT = 5000,
-        RX_TIMEOUT    = 10000;
+        CLIENT_WAIT     = 10, // ms
+        CLIENT_TIMEOUT  = 10000,
+        CLOSE_TIMEOUT   = 5000;
 
 public:
     CExeModule()
@@ -128,48 +128,20 @@ public:
     {
         if (m_bConnected)
         {
-            m_ConnSocket.Shutdown(SD_SEND);
+            DisplayData(true); // display statistics..
 
-            DWORD idx = ::WSAWaitForMultipleEvents(1, (LPWSAEVENT)&m_ev, FALSE, CLOSE_TIMEOUT, FALSE);
-
-            if (idx == WSA_WAIT_FAILED)
-            {
-                return DisplayError(_T("WSAWaitForMultipleEvents() failed."));
-            }
-            else if (idx == WSA_WAIT_TIMEOUT)
-            {
-                // @TODO: km 20160830 - return on timeout..
-            }
-            idx -= WSA_WAIT_EVENT_0;
-
-            WSANETWORKEVENTS ne = {0};
-            if (!m_ConnSocket.EnumEvents(m_ev, &ne))
-            {
-                return DisplayError(_T("CSocketAsync.EnumEvents() failed."));
-            }
-            if (ne.lNetworkEvents & FD_CLOSE)
-            {
-                MSG(1, _T("FD_CLOSE event fired\n"));
-                if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
-                {
-                    return DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
-                }
-            }
             m_ConnSocket.Close();
             m_ev.Close();
 
             m_bConnected = false;
-
-            ERR(_T("\nTerminated: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
         }
+        ERR(_T("\nTerminated: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
 
         return ERROR_SUCCESS;
     }
 
     int Run(void) throw()
     {
-        int err = ERROR_SUCCESS;
-
         // Set Ctrl+C, Ctrl+Break handler
         CCtrlHandler ctrl(_CtrlHandler);
 
@@ -178,79 +150,138 @@ public:
             return DisplayError(_T("CSocketEvent.Create() failed."));
         }
 
-#if 0
-        return RunAsync();
-#endif
+        if (!m_ConnSocket.SelectEvents(m_ev, FD_READ | FD_WRITE | FD_CLOSE))
+        {
+            return DisplayError(_T("CSocketAsync.SelectEvents() failed."));
+        }
 
-        m_ConnSocket.SelectEvents(m_ev, /*FD_READ | FD_WRITE |*/ FD_CLOSE);
+        DWORD timeout = CLIENT_TIMEOUT / CLIENT_WAIT;
+        DWORD timeoutcnt = 0;
+        DWORD requestcnt = 0;
 
-        // @WARNING: Notice that nothing in this code is specific to whether we are using UDP or TCP.
-        //
-        // When connect() is called on a datagram socket, it does not actually establish the connection as a stream socket would.
-        // Instead, TCP/IP establishes the remote half of the (local IP/port, remote IP/port) mapping.
-        // So, it's possible to use send() and recv() on datagram sockets, instead of recvfrom() and sendto().
-        //
-
+        USHORT lkey = 0; // last random key sent..
         UINT64 tick = 0;
 
         if (m_worktime > 0)
         {
-            m_requests = 0; // infinite
+            m_requests = (UINT_MAX - 1);// "infinite"
             tick = ::GetTickCount64() + m_worktime * 1000;
         }
 
-        for (int i = 0; !m_requests || i < m_requests; ++i)
+        while (CQuit::run())
         {
-            // compose a message to send.
-            DATABOXT box;
-            box.pkg.anchor = ANCHOR;
-            box.pkg.keyval = ntohs((USHORT)m_rg.number());
-
-            int len = DATABOX_SIZE_SEND;
-
-            if ((err = SendData(box.buffer, len, RX_TIMEOUT)) == ERROR_TIMEOUT) continue;
-            if (err != ERROR_SUCCESS) break; // reconnect ??
-
-            char buf[BUFFER_SIZE] = {0};
-            len = sizeof(buf);
-
-            if ((err = ReadData(buf, len, RX_TIMEOUT)) != ERROR_SUCCESS) break; // reconnect ?
-
-            LPDATABOXT pbox = (LPDATABOXT)buf;
-            if (pbox->pkg.keyval != box.pkg.keyval)
-            {
-                ERR(_T("Key mismatch: sent %u, received %u\n"), box.pkg.keyval, pbox->pkg.keyval);
-            }
-
-            if (CQuit::yes()) break;
-
-            DisplayData(); // display statistics..
-
-            if (m_delaytik > 0) { ::Sleep(m_delaytik); }
-
             if (m_worktime > 0 && tick < ::GetTickCount64())
             {
                 MSG(0, _T("Working time (%i s) is elapsed\n"), m_worktime);
+                // wait for FD_CLOSE event on success..
+                if (!Shutdown()) break; // immediate non-graceful closure
+            }
+
+            DWORD idx = ::WSAWaitForMultipleEvents(1, m_ev, FALSE, CLIENT_WAIT, FALSE);
+
+            if (idx == WSA_WAIT_FAILED)
+            {
+                return DisplayError(_T("WSAWaitForMultipleEvents() failed."));
+            }
+            else if (idx == WSA_WAIT_TIMEOUT)
+            {
+                if (++timeoutcnt < timeout) continue;
+
+                return ERROR_TIMEOUT;
+            }
+            timeoutcnt = 0; // reset
+
+            WSANETWORKEVENTS ne = {0};
+            if (!m_ConnSocket.EnumEvents(m_ev, &ne))
+            {
+                DisplayError(_T("CSocketAsync.EnumEvents() failed."));
+                continue;
+            }
+            else if (ne.lNetworkEvents & FD_READ)
+            {
+                MSG(2, _T("FD_READ event fired\n"));
+
+                if (ne.iErrorCode[FD_READ_BIT] != 0)
+                {
+                    return DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);
+                }
+
+                DATABOXT box = {0};
+
+                int len = DATABOX_SIZE_READ;
+
+                if (ReadDataAsync(box.buffer, len) == SOCKET_ERROR)
+                    return SOCKET_ERROR;
+
+                if (lkey != htons(box.pkg.keyval))
+                {
+                    ERR(_T("Key mismatch: sent %u, received %u\n"), lkey, htons(box.pkg.keyval));
+                }
+
+                if (m_delaytik > 0) { ::Sleep(m_delaytik); }
+
+                if (requestcnt >= m_requests)
+                {
+                    MSG(0, _T("Request limit (%i) is reached\n"), m_requests);
+                    // wait for FD_CLOSE event on success..
+                    if (Shutdown()) continue;
+
+                    break; // immediate non-graceful closure
+                }
+
+                box.pkg.anchor = ANCHOR;
+                box.pkg.keyval = ntohs((USHORT)m_rg.number());
+
+                len = DATABOX_SIZE_SEND;
+
+                if (SendDataAsync(box.buffer, len) == SOCKET_ERROR)
+                    return SOCKET_ERROR;
+
+                ++requestcnt;
+
+                lkey = htons(box.pkg.keyval);
+                MSG(0, _T("Sent %i bytes, key=%u\n"), len, lkey);
+            }
+            else if (ne.lNetworkEvents & FD_WRITE)
+            {
+                MSG(2, _T("FD_WRITE event fired\n"));
+
+                if (ne.iErrorCode[FD_WRITE_BIT] != 0)
+                {
+                    return DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
+                }
+
+                DATABOXT box;
+                box.pkg.anchor = ANCHOR;
+                box.pkg.keyval = ntohs((USHORT)m_rg.number()); // @WARNING: a new one random value send.
+
+                int len = DATABOX_SIZE_SEND;
+
+                if (SendDataAsync(box.buffer, len) == SOCKET_ERROR)
+                    return SOCKET_ERROR;
+
+                ++requestcnt;
+
+                lkey = htons(box.pkg.keyval);
+                MSG(0, _T("Sent %i bytes, key=%u\n"), len, lkey);
+            }
+            else if (ne.lNetworkEvents & FD_CLOSE)
+            {
+                MSG(2, _T("FD_CLOSE event fired\n"));
+                if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
+                {
+                    return DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
+                }
+                MSG(0, _T("Server closed connection\n"));
+
                 break;
             }
 
-        } // for ()
+            DisplayData(false); // display statistics..
 
-        m_ConnSocket.Shutdown(SD_SEND);
+        } // while()
 
-        // Since TCP does not preserve message boundaries, there may still be more data arriving from the server.
-        // So we continue to receive data until the server closes the connection.
-        //
-        if (m_socktype == SOCK_STREAM)
-        {
-            char buf[BUFFER_SIZE] = {0};
-            int len = sizeof(buf);
-
-            while (ReadData(buf, len, RX_TIMEOUT) == ERROR_SUCCESS);
-        }
-        MSG(0, _T("Done sending\n"));
-
-        return err;
+        return ERROR_SUCCESS;
     }
 
 
@@ -296,236 +327,85 @@ public:
 protected:
     // helper methods
 
-    int RunAsync(void) throw()
+    int ReadDataAsync(char* buf, int len) throw()
     {
-        if (!m_ConnSocket.SelectEvents(m_ev, FD_READ | FD_WRITE | FD_CLOSE))
+        int bytes = recv(m_ConnSocket, buf, len, 0);
+        if (bytes == SOCKET_ERROR)
         {
-            return DisplayError(_T("CSocketAsync.SelectEvents() failed."));
-        }
-
-        for (;;)
-        {
-            DWORD idx = ::WSAWaitForMultipleEvents(1, (LPWSAEVENT)&m_ev, FALSE, RX_TIMEOUT, FALSE);
-
-            if (idx == WSA_WAIT_FAILED)
-            {
-                return DisplayError(_T("WSAWaitForMultipleEvents() failed."));
-            }
-            else if (idx == WSA_WAIT_TIMEOUT)
-            {
-                return ERROR_TIMEOUT;
-            }
-
-            WSANETWORKEVENTS ne = { 0 };
-            if (!m_ConnSocket.EnumEvents(m_ev, &ne))
-            {
-                return DisplayError(_T("CSocketAsync.EnumEvents() failed."));
-            }
-
-            if (ne.lNetworkEvents & FD_READ)
-            {
-                MSG(1, _T("FD_READ event fired\n"));
-
-                if (ne.iErrorCode[FD_READ_BIT] != 0)
-                {
-                    return DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);
-                }
-
-                // @TODO: km 20160906 - write code..
-
-            }
-            else if (ne.lNetworkEvents & FD_WRITE)
-            {
-                MSG(1, _T("FD_WRITE event fired\n"));
-
-                if (ne.iErrorCode[FD_WRITE_BIT] != 0)
-                {
-                    return DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
-                }
-
-                // @TODO: km 20160906 - write code..
-            }
-
-        } // for ()
-
-        return ERROR_SUCCESS;
-    }
-    // @TODO: km 20160831 - work-flow should be detailed
-#if 0
-    int SendDataAsync(const char* buf, int& len, DWORD timeout) throw()
-    {
-
-        for (;;)
-        {
-            int bytes = 0;
-
-            if ((bytes = send(m_ConnSocket, buf, len, 0)) > 0 || ::WSAGetLastError() != WSAEWOULDBLOCK)
-                break;
-
-            DWORD idx = ::WSAWaitForMultipleEvents(1, (LPWSAEVENT)&m_ev, FALSE, timeout, FALSE);
-
-            if (idx == WSA_WAIT_FAILED)
-            {
-                return DisplayError(_T("WSAWaitForMultipleEvents() failed."));
-            }
-            else if (idx == WSA_WAIT_TIMEOUT)
-            {
-                return ERROR_TIMEOUT;
-            }
-
-
-            WSANETWORKEVENTS ne = {0};
-            if (!m_ConnSocket.EnumEvents(m_ev, &ne))
-            {
-                return DisplayError(_T("CSocketAsync.EnumEvents() failed."));
-            }
-
-            if (ne.lNetworkEvents & FD_WRITE)
-            {
-                MSG(1, _T("FD_WRITE event fired\n"));
-
-                if (ne.iErrorCode[FD_WRITE_BIT] != 0)
-                {
-                    return DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
-                }
-
-                len = send(m_ConnSocket, buf, len, 0);
-                break;
-            }
-
-        } // for ()
-
-        return ERROR_SUCCESS;
-    }
-#endif
-
-    // @TODO: km 20160831 - work-flow should be detailed
-#if 0
-    int ReadDataAsync(char* buff, int& len, DWORD timeout) throw()
-    {
-
-        for (;;)
-        {
-            DWORD idx = ::WSAWaitForMultipleEvents(1, (LPWSAEVENT)&m_ev, FALSE, timeout, FALSE);
-
-            if (idx == WSA_WAIT_FAILED)
-            {
-                return DisplayError(_T("WSAWaitForMultipleEvents() failed."));
-            }
-            else if (idx == WSA_WAIT_TIMEOUT)
-            {
-                return ERROR_TIMEOUT;
-            }
-
-
-            WSANETWORKEVENTS ne = {0};
-            if (!m_ConnSocket.EnumEvents(m_ev, &ne))
-            {
-                return DisplayError(_T("CSocketAsync.EnumEvents() failed."));
-            }
-
-            if (ne.lNetworkEvents & FD_READ)
-            {
-                MSG(1, _T("FD_READ event fired\n"));
-
-                if (ne.iErrorCode[FD_READ_BIT] != 0)
-                {
-                    return DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);
-                }
-
-                if ((len = recv(m_ConnSocket, buff, len, 0)) == WSAEWOULDBLOCK)
-                {
-                    len = 0;
-                    return WSA_E_NO_MORE;
-                }
-            }
-
-        } // for ()
-
-        return ERROR_SUCCESS;
-    }
-#endif
-
-    int SendData(const char* buf, int& len, DWORD timeout) throw()
-    {
-        UINT64 tick = ::GetTickCount64() + timeout;
-
-        while (CQuit::run())
-        {
-            int bytes = send(m_ConnSocket, buf, len, 0);
-            if (bytes != SOCKET_ERROR && bytes == len)
-            {
-                LPDATABOXT box = (LPDATABOXT)buf;
-                MSG(0, _T("Sent %i bytes, key=%u\n"), bytes, htons(box->pkg.keyval));
-
-                SentMoreData(bytes); // statistics..
-                break; // success
-            }
-
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
             {
-                len = 0;
-                return DisplayError(_T("send() failed."));
+                DisplayError(_T("recv() failed."));
+                return SOCKET_ERROR;
+            }
+            return WSAEWOULDBLOCK;
+        }
+        if (DATABOX_SIZE_READ == bytes && ((LPDATABOXT)buf)->pkg.anchor == ANCHOR)
+        {
+            DATABOXT& box = *(LPDATABOXT)buf;
+            MSG(0, _T("Received: key=%u, result=%u\n"), htons(box.pkg.keyval), htonl(box.pkg.result));
+        }
+        else
+        {
+            // read another type of message..
+            CString str(buf, bytes);
+            for (;;)
+            {
+                int cb = recv(m_ConnSocket, buf, len, 0);
+                if (cb == SOCKET_ERROR)
+                {
+                    if (::WSAGetLastError() != WSAEWOULDBLOCK)
+                    {
+                        DisplayError(_T("recv() failed."));
+                        return SOCKET_ERROR;
+                    }
+                    break;
+                }
+                str.Append(CString(buf, cb));
+                bytes += cb;
             }
 
-            if (tick < ::GetTickCount64())
-                return ERROR_TIMEOUT;
-
-            ::Sleep(CLIENT_WAIT);
+            MSG(0, _T("Received %i bytes: \"%s\"\n"), bytes, (LPCTSTR)str);
         }
+        ReadMoreData(bytes); // statistics..
 
         return ERROR_SUCCESS;
     }
 
-    int ReadData(char* buf, int& len, int timeout) throw()
+    int SendDataAsync(const char* buf, int& len) throw()
     {
-        UINT64 tick = ::GetTickCount64() + timeout;
-
-        do 
+        len = send(m_ConnSocket, buf, len, 0);
+        if (len == SOCKET_ERROR)
         {
-            int bytes = recv(m_ConnSocket, buf, len, 0);
-            if (bytes != SOCKET_ERROR)
-            {
-                len = bytes;
-                // We are not likely to see this with UDP, since there is no 'connection' established. 
-                if (bytes == 0)
-                {
-                    MSG(0, _T("Server closed connection\n"));
-                    return SOCKET_ERROR;
-                }
-                else
-                {
-                    while (DATABOX_SIZE_READ <= bytes && ((LPDATABOXT)buf)->pkg.anchor == ANCHOR)
-                    {
-                        DATABOXT& box = *(LPDATABOXT)buf;
-                        MSG(0, _T("Received: key=%u, result=%u\n"), htons(box.pkg.keyval), htonl(box.pkg.result));
-
-                        buf += bytes; bytes -= DATABOX_SIZE_READ;
-                    }
-                    if (bytes > 0)
-                    {
-                        CString str(buf, bytes);
-                        MSG(0, _T("Received %i bytes from server: \"%s\"\n"), bytes, (LPCTSTR)str);
-                    }
-                    ReadMoreData(len); // statistics..
-                }
-                break; // success
-            }
-
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
             {
-                len = 0;
-                return DisplayError(_T("recv() failed."));
+                DisplayError(_T("send() failed."));
+                return SOCKET_ERROR;
             }
-
-            if (tick < ::GetTickCount64())
-                return ERROR_TIMEOUT;
-
-            ::Sleep(CLIENT_WAIT);
-
-        } while (CQuit::run());
+            return WSAEWOULDBLOCK;
+        }
+        SentMoreData(len); // statistics..
 
         return ERROR_SUCCESS;
+    }
+
+    bool Shutdown(void) throw()
+    {
+        if (m_ConnSocket.Shutdown(SD_SEND))
+        {
+            if (m_socktype == SOCK_STREAM)
+            {
+                // Since TCP does not preserve message boundaries, there may still be more data arriving from the server.
+                char buf[BUFFER_SIZE] = {0};
+                int len = sizeof(buf);
+
+                while (recv(m_ConnSocket, buf, len, 0) > 0);
+
+                MSG(2, _T("Done sending\n"));
+
+                return true;
+            }
+        }
+        return false;
     }
 
     bool GetConfigString(CString& buf, LPCTSTR path, LPCTSTR key, LPCTSTR dflt = 0, LPCTSTR app = _T("client")) throw()
@@ -557,10 +437,10 @@ protected:
 public:
     bool m_bPause;      // "press any key" on exit..
 
-    int m_clientid;
-    int m_requests;
-    int m_delaytik;     // delay between requests, ms (client)
-    int m_worktime;     // total working time, s (client)
+    UINT m_clientid;
+    UINT m_requests;
+    UINT m_delaytik;    // delay between requests, ms (client)
+    UINT m_worktime;    // total working time, s (client)
 
 private:
     CSocketAsync m_ConnSocket;

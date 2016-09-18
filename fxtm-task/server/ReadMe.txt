@@ -14,7 +14,7 @@ and respawn another one. Saved state is loaded by respawned process.
 The whole archicture based on classes specialization (high cohesion) and low coupling principles.
 Though, this is just a working prototype solving the only task (see above).
 
-Instruments used:
+Tools used:
 Visual Studio 2015 + GitHub extention (installed from Gallery)
 The only target platform is Microsoft Windows (x86-64).
 

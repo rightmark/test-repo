@@ -82,6 +82,8 @@ public:
     {
         if (m_bConnected)
         {
+            DisplayData(true); // display statistics..
+
             if (m_pServer->Disconnect() == ERROR_SUCCESS)
             {
                 m_bConnected = false;
@@ -97,24 +99,19 @@ public:
 
     int Run(void) throw()
     {
-        int err = ERROR_SUCCESS;
-
         // Set Ctrl+C, Ctrl+Break handler
         CCtrlHandler ctrl(_CtrlHandler);
 
-        if (m_pServer)
+        int err = m_pServer->Run();
+        if (err == ERROR_SUCCESS)
         {
-            err = m_pServer->Run();
-            if (err == ERROR_SUCCESS)
+            while (CQuit::run())
             {
-                while (CQuit::run())
-                {
-                    DisplayData(); // display statistics..
+                DisplayData(false); // display statistics..
 
-                    ::Sleep(WORKER_WAIT);
+                ::Sleep(WORKER_WAIT);
 
-                    ++ms_tickcnt; // I'm alive..
-                }
+                ++ms_tickcnt; // I'm alive..
             }
         }
         return err;

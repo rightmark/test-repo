@@ -33,7 +33,7 @@ public:
         InterlockedIncrementNoFence(&ms_nDirty);
         InterlockedExchangeAdd(&ms_BytesSent, add);
     }
-    bool DisplayData(void) throw()
+    bool DisplayData(bool bForce) throw()
     {
         static UINT64 lasttick = 0;
 
@@ -43,7 +43,7 @@ public:
         UINT64 tick = ::GetTickCount64();
         LONG chgcnt = ms_nDirty;
 
-        if (chgcnt > 0 && tick > lasttick)
+        if (bForce || (chgcnt > 0 && tick > lasttick))
         {
             if (ms_ConnCount < (UINT)-1) // @WARNING: no connections available for datagrams..
             {
