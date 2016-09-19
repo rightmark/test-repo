@@ -113,6 +113,11 @@ public:
         ERR(_T("\nStarted: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
 
         if (!CreateWorkers()) return errno; // cannot start threads
+        // errno is set to EAGAIN if there are too many threads,
+        // to EINVAL if the argument is invalid or the stack size is incorrect,
+        // or to EACCES if there are insufficient resources(such as memory).
+
+        Reset(); // statistics..
 
         int idx = 0;
         for (; pai != NULL; pai = pai->ai_next)
@@ -234,6 +239,11 @@ public:
         ERR(_T("\nStarted: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
 
         if (!m_worker.Create(false)) return errno; // cannot start thread
+        // errno is set to EAGAIN if there are too many threads,
+        // to EINVAL if the argument is invalid or the stack size is incorrect,
+        // or to EACCES if there are insufficient resources(such as memory).
+
+        Reset((ULONG)-1); // statistics..
 
         int idx = 0;
         for (; pai != NULL; pai = pai->ai_next)
@@ -296,9 +306,8 @@ public:
             ERR(_T("Fatal error: unable to serve on any address.\n"));
             return -1; // WSANO_DATA ??
         }
-        Reset((ULONG)-1); // statistics..
 
-        return ERROR_SUCCESS; WSA_E_NO_MORE;
+        return ERROR_SUCCESS;
     }
     long IoControl(long code, bool bEnable) throw()
     {

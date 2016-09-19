@@ -121,7 +121,7 @@ public:
 
             m_bConnected = true;
         }
-        return ERROR_SUCCESS; WSA_E_NO_MORE;
+        return ERROR_SUCCESS;
     }
 
     int Disconnect(void) throw()
@@ -210,7 +210,7 @@ public:
 
                 int len = DATABOX_SIZE_READ;
 
-                if (ReadDataAsync(box.buffer, len) == SOCKET_ERROR)
+                if (ReadData(box.buffer, len) == SOCKET_ERROR)
                     return SOCKET_ERROR;
 
                 if (DATABOX_SIZE_READ != len || box.pkg.anchor != ANCHOR)
@@ -237,7 +237,7 @@ public:
 
                 len = DATABOX_SIZE_SEND;
 
-                if (SendDataAsync(box.buffer, len) == SOCKET_ERROR)
+                if (SendData(box.buffer, len) == SOCKET_ERROR)
                     return SOCKET_ERROR;
 
                 ++requestcnt;
@@ -260,7 +260,7 @@ public:
 
                 int len = DATABOX_SIZE_SEND;
 
-                if (SendDataAsync(box.buffer, len) == SOCKET_ERROR)
+                if (SendData(box.buffer, len) == SOCKET_ERROR)
                     return SOCKET_ERROR;
 
                 ++requestcnt;
@@ -330,7 +330,7 @@ public:
 protected:
     // helper methods
 
-    int ReadDataAsync(char* buf, int& len) throw()
+    int ReadData(char* buf, int& len) throw()
     {
         int bytes = recv(m_ConnSocket, buf, len, 0);
         if (bytes == SOCKET_ERROR)
@@ -375,10 +375,10 @@ protected:
         return ERROR_SUCCESS;
     }
 
-    int SendDataAsync(const char* buf, int& len) throw()
+    int SendData(const char* buf, int& len) throw()
     {
-        len = send(m_ConnSocket, buf, len, 0);
-        if (len == SOCKET_ERROR)
+        int bytes = send(m_ConnSocket, buf, len, 0);
+        if (bytes == SOCKET_ERROR)
         {
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
             {
@@ -387,21 +387,32 @@ protected:
             }
             return WSAEWOULDBLOCK;
         }
-        SentMoreData(len); // statistics..
+        len = bytes;
+
+        SentMoreData(bytes); // statistics..
 
         return ERROR_SUCCESS;
     }
 
     bool Shutdown(void) throw()
     {
+        char buf[BUFFER_SIZE] = {0};
+        int len = sizeof(buf);
+
+        if (m_socktype == SOCK_DGRAM)
+        {
+            // signal to UDP server we are finishing..
+            if (send(m_ConnSocket, buf, 0, 0) == SOCKET_ERROR)
+            {
+                DisplayError(_T("send() failed."));
+            }
+        }
+
         if (m_ConnSocket.Shutdown(SD_SEND))
         {
             if (m_socktype == SOCK_STREAM)
             {
                 // Since TCP does not preserve message boundaries, there may still be more data arriving from the server.
-                char buf[BUFFER_SIZE] = {0};
-                int len = sizeof(buf);
-
                 while (recv(m_ConnSocket, buf, len, 0) > 0);
 
                 MSG(2, _T("Done sending\n"));
@@ -409,6 +420,7 @@ protected:
                 return true;
             }
         }
+        // do not wait for FD_CLOSE
         return false;
     }
 

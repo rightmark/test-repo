@@ -37,6 +37,12 @@ protected:
         SentMoreData(cb);
     }
 
+    // @WARNING: called on FD_WRITE event.
+    // MSDN claims, that An FD_WRITE network event is recorded when a socket is first connected
+    // with a call to the connect (for client), or when a socket is accepted with accept (for server).
+    // The interesting fact that FD_WRITE fired for each connect and the only once (per WSA initialization)
+    // for accept connection by server. Any other accepted connections do not fire this event anymore..
+    // 
     int Hello(CSocketAsync& s) throw()
     {
         char buf[] = HELLO_STR;
@@ -84,7 +90,7 @@ public:
         }
         else if (bytes == 0)
         {
-            MSG(0, _T("Client closed connection\n"));
+            MSG(1, _T("Client closed connection\n"));
             return SOCKET_ERROR;
         }
 
@@ -189,10 +195,9 @@ public:
             DisplayError(_T("recvfrom() failed."));
             return bytes;
         }
-        if (bytes == 0)
+        else if (bytes == 0)
         {
-            // Actually, this should never happen on an unconnected socket..
-            MSG(1, _T("recvfrom() returned zero, aborting\n"));
+            MSG(1, _T("recvfrom() returned zero. client terminated.\n"));
             return bytes;
         }
 
@@ -253,7 +258,7 @@ public:
         }
         else if (bytes == 0)
         {
-            MSG(0, _T("Client closed connection\n"));
+            MSG(1, _T("Client closed connection\n"));
             return SOCKET_ERROR;
         }
 
@@ -307,7 +312,7 @@ public:
 
     int SendData(CSocketAsync& s) throw()
     {
-        if (m_data.empty()) { return Hello(s); }
+//         if (m_data.empty()) { return Hello(s); }
 
         while (!m_data.empty())
         {
@@ -366,11 +371,9 @@ public:
             }
             return 0; // next time
         }
-
-        if (bytes == 0)
+        else if (bytes == 0)
         {
-            // Actually, this should never happen on an unconnected socket..
-            MSG(1, _T("recvfrom() returned zero, aborting\n"));
+            MSG(1, _T("recvfrom() returned zero. client terminated.\n"));
             return bytes;
         }
 

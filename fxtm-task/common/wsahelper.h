@@ -63,7 +63,7 @@ public:
 };
 
 
-class CSocketAsync
+class ATL_NO_VTABLE CSocketAsync
 {
 public:
     CSocketAsync() throw() : m_s(INVALID_SOCKET) {}
@@ -82,7 +82,7 @@ public:
             if (m_s != INVALID_SOCKET) { Close(); }
             Attach(s.Detach());
         }
-        return  *this;
+        return *this;
     }
     operator SOCKET() const throw() { return m_s; }
 
@@ -99,7 +99,7 @@ public:
         SOCKET s = m_s; // release ownership
         m_s = INVALID_SOCKET;
 
-        return  s;
+        return s;
     }
 
     void Close(void) throw()
@@ -115,7 +115,7 @@ public:
     {
         ATLASSUME(m_s == INVALID_SOCKET);
         m_s = socket(pai->ai_family, pai->ai_socktype, pai->ai_protocol);
-        return  (m_s != INVALID_SOCKET);
+        return (m_s != INVALID_SOCKET);
     }
     bool Bind(PADDRINFOT pai) throw()
     {
@@ -185,7 +185,7 @@ private:
 // ok, the standard ATL::CEvent class could be used surely.
 // this custom wrapper is used instead to avoid one more dependency on ATL and make code more WSA-specific.
 //
-class CSocketEvent
+class ATL_NO_VTABLE CSocketEvent
 {
     typedef const WSAEVENT *LPCWSAEVENT;
 
@@ -209,7 +209,7 @@ public:
             }
             Attach(h.Detach());
         }
-        return  *this;
+        return *this;
     }
     operator WSAEVENT() const throw() { return m_h; }
 
@@ -225,7 +225,7 @@ public:
         HANDLE h = m_h; // release ownership
         m_h = NULL;
 
-        return  h;
+        return h;
     }
 
     void Close(void) throw()
@@ -241,19 +241,19 @@ public:
     {
         ATLASSUME(m_h == NULL);
         m_h = ::WSACreateEvent();
-        return  (m_h != WSA_INVALID_EVENT);
+        return (m_h != WSA_INVALID_EVENT);
     }
     // set the event to the non-signaled state
     bool Reset(void) throw()
     {
         ATLASSUME(m_h != NULL);
-        return  !!(::WSAResetEvent(m_h));
+        return !!(::WSAResetEvent(m_h));
     }
     // set the event to the signaled state
     bool Set(void) throw()
     {
         ATLASSUME(m_h != NULL);
-        return  !!(::WSASetEvent(m_h));
+        return !!(::WSASetEvent(m_h));
     }
 
 private:

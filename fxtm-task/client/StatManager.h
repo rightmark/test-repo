@@ -42,7 +42,7 @@ public:
         }
         return false;
     }
-    void Reset(UINT c = 0) throw()
+    void Reset(void) throw()
     {
         ms_BytesRead = 0;
         ms_BytesSent = 0;

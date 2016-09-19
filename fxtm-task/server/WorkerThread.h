@@ -352,7 +352,7 @@ public:
 
         while (CQuit::run())
         {
-            LONG events = (FD_ACCEPT | FD_CLOSE/*|FD_CONNECT*/);
+            LONG events = (FD_ACCEPT | FD_CLOSE /*| FD_CONNECT*/);
 
             if (m_nConnUsed < 1 && !AcceptHelper(events))
             {
@@ -372,8 +372,6 @@ public:
                 if (CQuit::yes()) break;
 
                 AcceptHelper(events);
-
-                // @TODO: km 20160824 - TBD..
                 continue;
             }
 
@@ -387,6 +385,7 @@ public:
             }
             else if (ne.lNetworkEvents & FD_ACCEPT)
             {
+                MSG(3, _T("FD_ACCEPT event fired\n"));
                 if (ne.iErrorCode[FD_ACCEPT_BIT] != 0)
                 {
                     DisplayError(_T("FD_ACCEPT failed."), ne.iErrorCode[FD_ACCEPT_BIT]);
@@ -443,7 +442,7 @@ public:
 
                             w.back()->Create(false);
                         }
-                    }
+                    } // for ()
 
                     if (bFound) { AddConnStat(); } // statistics.. 
                 }
@@ -459,7 +458,7 @@ public:
             }
             else if (ne.lNetworkEvents & FD_CLOSE)
             {
-                MSG(1, _T("FD_CLOSE event fired (listener)\n"));
+                MSG(3, _T("FD_CLOSE event fired (listener)\n"));
                 if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
                 {
                     DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
@@ -469,7 +468,7 @@ public:
             } 
             else if (ne.lNetworkEvents & FD_CONNECT)
             {
-                MSG(1, _T("FD_CONNECT event fired\n"));
+                MSG(3, _T("FD_CONNECT event fired\n"));
             } 
 
         } // while(bQuit)

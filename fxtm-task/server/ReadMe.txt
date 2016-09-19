@@ -7,7 +7,7 @@ The task description can be found in Task.h file
 
 Tech note:
 Server is IP-agnostic (ipv4 and ipv6 both are used) and based on an asynchronous event-driven scheme (like nginx uses).
-Different instanses work with UDP and TCP protocols.
+Dedicated instanses work with UDP and TCP protocols.
 Each supported service saves its state into binary format file every N seconds.
 There is a heartbeat server that monitors worker server activity, terminates suspended process,
 and respawn another one. Saved state is loaded by respawned process.
