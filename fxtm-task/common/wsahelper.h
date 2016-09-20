@@ -92,7 +92,7 @@ public:
         m_s = s; // take ownership
 
         m_addrlen = sizeof(m_addr);
-        getpeername(m_s, (LPSOCKADDR)&m_addr, &m_addrlen);
+        getpeername(m_s, (PSOCKADDR)&m_addr, &m_addrlen);
     }
     SOCKET Detach(void) throw()
     {
@@ -145,12 +145,12 @@ public:
     }
     bool Accept(LPSOCKADDR_STORAGE addr, LPINT addrlen, SOCKET& s) throw()
     {
-        return ((s = accept(m_s, (LPSOCKADDR)addr, addrlen)) != SOCKET_ERROR);
+        return ((s = accept(m_s, (PSOCKADDR)addr, addrlen)) != SOCKET_ERROR);
     }
-    long NameInfo(LPSOCKADDR *addr, LPTSTR hostname, DWORD size) throw()
+    long NameInfo(PSOCKADDR *addr, LPTSTR hostname, DWORD size) throw()
     {
-        *addr = (LPSOCKADDR)&m_addr;
-        return ::GetNameInfo((LPSOCKADDR)&m_addr, m_addrlen, hostname, size, NULL, 0, NI_NUMERICHOST);
+        *addr = (PSOCKADDR)&m_addr;
+        return ::GetNameInfo((PSOCKADDR)&m_addr, m_addrlen, hostname, size, NULL, 0, NI_NUMERICHOST);
     }
 
     bool SelectEvents(WSAEVENT ev, LONG events) throw()

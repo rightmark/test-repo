@@ -1,8 +1,9 @@
 #pragma once
 
 // tweaks
-#define _USE_REUSEADDR
 #define _LOG_CONNECTIONS
+#define _USE_REUSEADDR
+#define _USE_UDP_STATS
 
 
 #include "StatManager.h"
@@ -132,7 +133,7 @@ public:
                 continue;
             }
 
-            if ((pai->ai_family == PF_INET6) && IN6_IS_ADDR_LINKLOCAL((PIN6_ADDR)INETADDR_ADDRESS(pai->ai_addr)) && (((PSOCKADDR_IN6)(pai->ai_addr))->sin6_scope_id == 0))
+            if ((pai->ai_family == PF_INET6) && IN6_IS_ADDR_LINKLOCAL((PIN6_ADDR)INETADDR_ADDRESS(pai->ai_addr)) && (INETADDR_SCOPE_ID(pai->ai_addr).Value == 0))
             {
                 ERR(_T("IPv6 link local addresses should specify a scope ID.\n"));
             }
@@ -243,7 +244,9 @@ public:
         // to EINVAL if the argument is invalid or the stack size is incorrect,
         // or to EACCES if there are insufficient resources(such as memory).
 
+#ifndef _USE_UDP_STATS
         Reset((ULONG)-1); // statistics..
+#endif
 
         int idx = 0;
         for (; pai != NULL; pai = pai->ai_next)
@@ -258,7 +261,7 @@ public:
                 continue;
             }
 
-            if ((pai->ai_family == PF_INET6) && IN6_IS_ADDR_LINKLOCAL((PIN6_ADDR)INETADDR_ADDRESS(pai->ai_addr)) && (((PSOCKADDR_IN6)(pai->ai_addr))->sin6_scope_id == 0))
+            if ((pai->ai_family == PF_INET6) && IN6_IS_ADDR_LINKLOCAL((PIN6_ADDR)INETADDR_ADDRESS(pai->ai_addr)) && (INETADDR_SCOPE_ID(pai->ai_addr).Value == 0))
             {
                 ERR(_T("IPv6 link local addresses should specify a scope ID.\n"));
             }

@@ -23,7 +23,7 @@ Actually there is no any defined coding style.
 The code looks a bit eclectic because of C++11/14 syntax and library classes are mixed with Win API.
 C++11 nullptr is not used because of NULL-based Win API dominance.
 The code is Winsock 2.2 only oriented.
-This example demonstrates the various approaches including meta-programming + interfaces + ATL.
+This example demonstrates the various techniques including meta-programming + interfaces + ATL.
 Preprocessor and conditional compilation are used as well.
 
 rightmark.development@gmail

@@ -233,7 +233,7 @@ private:
 
         Unlock();
 
-        DelConnStat(); // statistics..
+        CStatManager::DelConnStat(); // statistics..
 
         return true;
     }
@@ -411,7 +411,7 @@ public:
                     continue;
                 }
 
-                err = ::GetNameInfo((LPSOCKADDR)&from, fromlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST);
+                err = ::GetNameInfo((PSOCKADDR)&from, fromlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST);
                 if (err != NO_ERROR)
                 {
                     DisplayError(_T("GetNameInfo() failed."), err);
@@ -444,7 +444,7 @@ public:
                         }
                     } // for ()
 
-                    if (bFound) { AddConnStat(); } // statistics.. 
+                    if (bFound) { CStatManager::AddConnStat(); } // statistics.. 
                 }
                 catch (std::bad_alloc& e)
                 {

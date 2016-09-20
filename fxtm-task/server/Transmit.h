@@ -1,6 +1,16 @@
 
 #pragma once
 
+
+#ifdef _USE_UDP_STATS
+
+#ifndef _UNORDERED_SET_
+#include <unordered_set>
+#endif
+
+#endif
+
+
 // default response
 #define HELLO_STR   "Hello. Rightmark server 1.0"
 
@@ -94,10 +104,10 @@ public:
             return SOCKET_ERROR;
         }
 
-        ReadDataStat(bytes);
+        ReadDataStat(bytes); // statistics..
 
         TCHAR hostname[MAX_ADDRSTRLEN];
-        LPSOCKADDR from = NULL;
+        PSOCKADDR from = NULL;
 
         int err = s.NameInfo(&from, hostname, _countof(hostname));
         if (err != NO_ERROR)
@@ -189,7 +199,7 @@ public:
         // Since UDP maintains message boundaries, the amount of data we get from a recvfrom()
         // should match exactly the amount of data the client sent in the corresponding sendto().
         //
-        int bytes = recvfrom(s, buf, sizeof(buf), 0, (LPSOCKADDR)&from, &fromlen);
+        int bytes = recvfrom(s, buf, sizeof(buf), 0, (PSOCKADDR)&from, &fromlen);
         if (bytes == SOCKET_ERROR)
         {
             DisplayError(_T("recvfrom() failed."));
@@ -203,7 +213,7 @@ public:
 
         ReadDataStat(bytes); // statistics..
 
-        int err = ::GetNameInfo((LPSOCKADDR)&from, fromlen, hostname, sizeof(hostname), NULL, 0, NI_NUMERICHOST);
+        int err = ::GetNameInfo((PSOCKADDR)&from, fromlen, hostname, sizeof(hostname), NULL, 0, NI_NUMERICHOST);
         if (err != NO_ERROR)
         {
             DisplayError(_T("GetNameInfo() failed."), err);
@@ -213,7 +223,7 @@ public:
         CString str(buf, bytes);
         MSG(1, _T("recv bytes=%i, port=%u: %s, from %s\n"), bytes, ntohs(SS_PORT(&from)), (LPCTSTR)str, hostname);
 
-        bytes = sendto(s, buf, bytes, 0, (LPSOCKADDR)&from, fromlen);
+        bytes = sendto(s, buf, bytes, 0, (PSOCKADDR)&from, fromlen);
         if (bytes == SOCKET_ERROR)
         {
             DisplayError(_T("sendto() failed."));
@@ -262,10 +272,10 @@ public:
             return SOCKET_ERROR;
         }
 
-        ReadDataStat(bytes);
+        ReadDataStat(bytes); // statistics..
 
         TCHAR hostname[MAX_ADDRSTRLEN];
-        LPSOCKADDR from = NULL;
+        PSOCKADDR from = NULL;
 
         int err = s.NameInfo(&from, hostname, _countof(hostname));
         if (err != NO_ERROR)
@@ -361,7 +371,7 @@ public:
         // Since UDP maintains message boundaries, the amount of data we get from a recvfrom()
         // should match exactly the amount of data the client sent in the corresponding sendto().
         //
-        int bytes = recvfrom(s, box.buffer, DATABOX_SIZE_READ, 0, (LPSOCKADDR)&from, &fromlen);
+        int bytes = recvfrom(s, box.buffer, DATABOX_SIZE_READ, 0, (PSOCKADDR)&from, &fromlen);
         if (bytes == SOCKET_ERROR)
         {
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
@@ -373,13 +383,17 @@ public:
         }
         else if (bytes == 0)
         {
+            DelConnStat((PSOCKADDR)&from); // statistics..
+
             MSG(1, _T("recvfrom() returned zero. client terminated.\n"));
             return bytes;
         }
 
-        ReadDataStat(bytes);
+        AddConnStat((PSOCKADDR)&from); // statistics..
 
-        int err = ::GetNameInfo((LPSOCKADDR)&from, fromlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST);
+        ReadDataStat(bytes); // statistics..
+
+        int err = ::GetNameInfo((PSOCKADDR)&from, fromlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST);
         if (err != NO_ERROR)
         {
             DisplayError(_T("GetNameInfo() failed."), err);
@@ -397,10 +411,9 @@ public:
 
                 result = GetResult(key);
             }
-
             box.pkg.result = ntohl(result);
 
-            bytes = sendto(s, box.buffer, DATABOX_SIZE_SEND, 0, (LPSOCKADDR)&from, fromlen);
+            bytes = sendto(s, box.buffer, DATABOX_SIZE_SEND, 0, (PSOCKADDR)&from, fromlen);
             if (bytes == SOCKET_ERROR)
             {
                 if (::WSAGetLastError() != WSAEWOULDBLOCK)
@@ -427,6 +440,48 @@ public:
         // @TODO: km 20160810 - write code..
         return 0;
     }
+
+protected:
+    // helpers
+#ifndef _USE_UDP_STATS
+    UINT AddConnStat(PSOCKADDR) throw()
+    {
+        return (UINT)-1;
+    }
+    UINT DelConnStat(PSOCKADDR) throw()
+    {
+        return (UINT)-1;
+    }
+#else
+    UINT AddConnStat(PSOCKADDR a) throw()
+    {
+        UINT64 key = GetKey(a);
+
+        auto p = m_conn.insert(key);
+        return (p.second) ? CStatManager::AddConnStat() : (UINT)-1;
+    }
+    UINT DelConnStat(PSOCKADDR a) throw()
+    {
+        UINT64 key = GetKey(a);
+
+        return (m_conn.erase(key)) ? CStatManager::DelConnStat() : (UINT)-1;
+    }
+    UINT64 GetKey(PSOCKADDR a) const throw()
+    {
+        if (a->sa_family == AF_INET6)
+        {
+            PUINT64 p = (PUINT64)&((PSOCKADDR_IN6)a)->sin6_addr;
+            return (p[0] ^ p[1] ^ ((PSOCKADDR_IN6)a)->sin6_port);
+        }
+        else
+        {
+            return (*(PUINT64)a);
+        }
+    }
+
+private:
+    std::unordered_set<UINT64> m_conn;
+#endif
 };
 
 

@@ -23,9 +23,9 @@ class CExeModule
 {
 
     static const DWORD
-        CLIENT_WAIT     = 10, // ms
-        CLIENT_TIMEOUT  = 10000,
-        CLOSE_TIMEOUT   = 5000;
+        CLIENT_TIMEOUT  = 30000,    // ms
+        CLOSE_TIMEOUT   = 5000,
+        CLIENT_WAIT     = 10;
 
 public:
     CExeModule()
@@ -68,13 +68,6 @@ public:
                     continue;
                 }
 
-#if 0
-                if ((pai->ai_family == PF_INET6) && IN6_IS_ADDR_LINKLOCAL((PIN6_ADDR)INETADDR_ADDRESS(pai->ai_addr)) && (((PSOCKADDR_IN6)(pai->ai_addr))->sin6_scope_id == 0))
-                {
-                    ERR(_T("IPv6 link local addresses should specify a scope ID.\n"));
-                }
-#endif
-
                 if (::GetNameInfo(pai->ai_addr, (int)pai->ai_addrlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST) != NO_ERROR)
                 {
                     _tcscpy_s(hostname, _countof(hostname), UNKNOWN_NAME);
@@ -100,7 +93,7 @@ public:
 
             // socket connection details..
 
-            LPSOCKADDR psa = NULL;
+            PSOCKADDR psa = NULL;
 
             // remote address and port
             if (m_ConnSocket.NameInfo(&psa, hostname, _countof(hostname)) != NO_ERROR)
@@ -113,9 +106,9 @@ public:
             SOCKADDR_STORAGE addr;
             int addrlen = sizeof(addr);
 
-            if (getsockname(m_ConnSocket, (LPSOCKADDR)&addr, &addrlen) != SOCKET_ERROR)
+            if (getsockname(m_ConnSocket, (PSOCKADDR)&addr, &addrlen) != SOCKET_ERROR)
             {
-                LPCTSTR p = InetNtop(pai->ai_family, INETADDR_ADDRESS((LPSOCKADDR)&addr), hostname, _countof(hostname));
+                LPCTSTR p = InetNtop(pai->ai_family, INETADDR_ADDRESS((PSOCKADDR)&addr), hostname, _countof(hostname));
                 MSG(0, _T("Using local address %s, port %u\n"), p ? p : UNKNOWN_NAME, ntohs(SS_PORT(&addr)));
             }
 
