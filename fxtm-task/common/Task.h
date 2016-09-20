@@ -46,8 +46,8 @@ public:
         : m_sqsum(0)
         , m_count(0)
         , m_bQuit(false)
-        , m_interval(INTERVAL_INI)
         , m_bRequiresSave(false)
+        , m_interval(INTERVAL_INI)
         , m_h(NULL)
     {}
 
@@ -170,7 +170,7 @@ protected:
 private:
     UINT ThreadProc(void) throw()
     {
-        ATLTRACE(_T("Task thread run (%p)\n"), this);
+        ATLTRACE(_T(">> Task thread run (%p)\n"), this);
 
         static UINT64 lasttick = 0;
 
@@ -193,7 +193,7 @@ private:
         }
         if (m_bRequiresSave) { SaveState(); }
 
-        ATLTRACE(_T("Task thread exited (%p)\n"), this);
+        ATLTRACE(_T("<< Task thread exited (%p)\n"), this);
 
         return ERROR_SUCCESS;
     }
