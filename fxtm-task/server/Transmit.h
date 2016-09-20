@@ -420,6 +420,8 @@ public:
             {
                 if (::WSAGetLastError() != WSAEWOULDBLOCK)
                 {
+                    DelConnStat((PSOCKADDR)&from); // statistics..
+
                     DisplayError(_T("sendto() failed."));
                     return SOCKET_ERROR;
                 }
