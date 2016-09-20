@@ -48,10 +48,10 @@ protected:
     }
 
     // @WARNING: called on FD_WRITE event.
-    // MSDN claims, that An FD_WRITE network event is recorded when a socket is first connected
-    // with a call to the connect (for client), or when a socket is accepted with accept (for server).
-    // The interesting fact that FD_WRITE fired for each connect and the only once (per WSA initialization)
-    // for accept connection by server. Any other accepted connections do not fire this event anymore..
+    // MSDN claims, that FD_WRITE network event is recorded when a socket is first connected
+    // with a call to the connect() (for client), or when a socket is accepted with accept() (for server).
+    // The interesting fact that FD_WRITE fired for each connect() and the only once (per WSA initialization)
+    // for accept() connection by server. Any other accepted connections do not fire this event anymore..
     // 
     int Hello(CSocketAsync& s) throw()
     {
