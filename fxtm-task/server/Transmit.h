@@ -376,7 +376,9 @@ public:
         {
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
             {
-                DisplayError(_T("recvfrom() failed."));
+                DelConnStat((PSOCKADDR)&from); // statistics..
+
+                DisplayError(_T("recvfrom() failed."));  WSAECONNRESET; //
                 return SOCKET_ERROR;
             }
             return 0; // next time
