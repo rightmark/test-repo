@@ -96,7 +96,7 @@ public:
             PSOCKADDR psa = NULL;
 
             // remote address and port
-            if (m_ConnSocket.NameInfo(&psa, hostname, _countof(hostname)) != NO_ERROR)
+            if (m_ConnSocket.NameInfo(psa, hostname, _countof(hostname)) != NO_ERROR)
             {
                 _tcscpy_s(hostname, _countof(hostname), UNKNOWN_NAME);
             }

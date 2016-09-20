@@ -109,7 +109,7 @@ public:
         TCHAR hostname[MAX_ADDRSTRLEN];
         PSOCKADDR from = NULL;
 
-        int err = s.NameInfo(&from, hostname, _countof(hostname));
+        int err = s.NameInfo(from, hostname, _countof(hostname));
         if (err != NO_ERROR)
         {
             DisplayError(_T("CSocketAsync.NameInfo() failed."), err);
@@ -277,7 +277,7 @@ public:
         TCHAR hostname[MAX_ADDRSTRLEN];
         PSOCKADDR from = NULL;
 
-        int err = s.NameInfo(&from, hostname, _countof(hostname));
+        int err = s.NameInfo(from, hostname, _countof(hostname));
         if (err != NO_ERROR)
         {
             DisplayError(_T("CSocketAsync.NameInfo() failed."), err);

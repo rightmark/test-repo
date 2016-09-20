@@ -147,10 +147,10 @@ public:
     {
         return ((s = accept(m_s, (PSOCKADDR)addr, addrlen)) != SOCKET_ERROR);
     }
-    long NameInfo(PSOCKADDR *addr, LPTSTR hostname, DWORD size) throw()
+    long NameInfo(PSOCKADDR& addr, LPTSTR hostname, DWORD size) throw()
     {
-        *addr = (PSOCKADDR)&m_addr;
-        return ::GetNameInfo((PSOCKADDR)&m_addr, m_addrlen, hostname, size, NULL, 0, NI_NUMERICHOST);
+        addr = (PSOCKADDR)&m_addr;
+        return ::GetNameInfo(addr, m_addrlen, hostname, size, NULL, 0, NI_NUMERICHOST);
     }
 
     bool SelectEvents(WSAEVENT ev, LONG events) throw()
