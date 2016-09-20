@@ -15,7 +15,7 @@ The whole archicture based on classes specialization (high cohesion) and low cou
 Though, this is just a working prototype solving the only task (see above).
 
 Tools used:
-Visual Studio 2015 + GitHub extention (installed from Gallery)
+Visual Studio 2015 + GitHub extension (installed from Gallery)
 The only target platform is Microsoft Windows (x86-64).
 
 Note on coding style:
