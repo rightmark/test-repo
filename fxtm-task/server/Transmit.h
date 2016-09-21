@@ -457,29 +457,29 @@ protected:
         return (UINT)-1;
     }
 #else
-    UINT AddConnStat(PSOCKADDR a) throw()
+    UINT AddConnStat(PSOCKADDR sa) throw()
     {
-        UINT64 key = GetKey(a);
+        UINT64 key = GetKey(sa);
 
         auto p = m_conn.insert(key);
         return (p.second) ? CStatManager::AddConnStat() : (UINT)-1;
     }
-    UINT DelConnStat(PSOCKADDR a) throw()
+    UINT DelConnStat(PSOCKADDR sa) throw()
     {
-        UINT64 key = GetKey(a);
+        UINT64 key = GetKey(sa);
 
         return (m_conn.erase(key)) ? CStatManager::DelConnStat() : (UINT)-1;
     }
-    UINT64 GetKey(PSOCKADDR a) const throw()
+    UINT64 GetKey(PSOCKADDR sa) const throw()
     {
-        if (a->sa_family == AF_INET6)
+        if (sa->sa_family == AF_INET6)
         {
-            PUINT64 p = (PUINT64)&((PSOCKADDR_IN6)a)->sin6_addr;
-            return (p[0] ^ p[1] ^ ((PSOCKADDR_IN6)a)->sin6_port);
+            PUINT64 p = (PUINT64)&((PSOCKADDR_IN6)sa)->sin6_addr;
+            return (p[0] ^ p[1] ^ ((PSOCKADDR_IN6)sa)->sin6_port);
         }
         else
         {
-            return (*(PUINT64)a);
+            return (*(PUINT64)sa);
         }
     }
 

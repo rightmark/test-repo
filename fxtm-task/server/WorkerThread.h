@@ -158,7 +158,7 @@ public:
                     DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
 
                     WSAECONNRESET; // connection was reset by the remote side
-                    WSAECONNABORTED; // connection was terminated due to a time - out or other failure
+                    WSAECONNABORTED; // connection was terminated due to a timeout or other failure
                 }
                 m_arrSockets[idx].Shutdown(SD_SEND);
 
