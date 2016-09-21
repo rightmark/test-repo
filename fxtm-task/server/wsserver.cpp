@@ -286,8 +286,8 @@ protected:
 
 private:
     bool m_bWorker;
-    bool m_bCircular;   // the oldest message in the queue should be eliminated in order to accommodate
-                        // the newly arrived message. (UDP server)
+    bool m_bCircular;   // the oldest message in the queue should be eliminated in order
+                        // to accommodate the newly arrived message. (UDP server)
     UINT m_MaxConnect;  // maximum concurrent connections (TCP server)
 
     IServer* m_pServer;
