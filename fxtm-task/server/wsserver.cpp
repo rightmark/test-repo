@@ -329,7 +329,7 @@ int _tmain(int argc, LPTSTR argv[])
         {
             _Module.BackupTaskState();
 
-            PROCESS_INFORMATION pi = { 0 };
+            PROCESS_INFORMATION pi = {0};
 
             do
             {
