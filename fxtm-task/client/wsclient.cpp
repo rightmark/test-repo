@@ -463,7 +463,6 @@ CExeModule _Module;     // reserved name, DO NOT change
 
 int _tmain(int argc, LPTSTR argv[])
 {
-
     int nRet = 0;
 
     try

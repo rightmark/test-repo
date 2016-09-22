@@ -359,7 +359,17 @@ class CTransmitUdpBuffer
     : public CTransmitBase<CTransmitUdpBuffer>
     , public CTaskProxy
 {
+    static const size_t MAX_CLIENTS = 1000; // estimated number of UDP concurrent clients
+
 public:
+    CTransmitUdpBuffer()
+    {
+#ifdef _USE_UDP_STATS
+        m_conn.max_load_factor(2.0f);
+        m_conn.reserve(MAX_CLIENTS); // @TODO: TBD..
+#endif
+    }
+
     int ReadData(CSocketAsync& s) throw()
     {
         DATABOXT box = {0};
