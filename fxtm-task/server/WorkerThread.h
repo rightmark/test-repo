@@ -20,13 +20,19 @@ class ATL_NO_VTABLE CWorkThreadBase
     typedef ATL::CComAutoCriticalSection AutoCriticalSection;
     typedef ATL::CComCritSecLock<AutoCriticalSection> AutoLock;
 
+    typedef const WSAEVENT *LPCWSAEVENT;
+
 protected:
-    static const size_t NUM_CONNECTIONS = t_N;
-    static const DWORD WORKER_WAIT = 50; // ms
+    static const size_t THREAD_CONNECTIONS = t_N;
+
+public:
+    // @WARNING: all parameters are subjects for tuning..
+    static const DWORD WORKER_DELAY = 50; // ms
+    static const DWORD WSA_WAIT = 5; // ms
 
 public:
     CWorkThreadBase()
-        : m_nConnUsed(0)
+        : m_nConnSockets(0)
         , m_h(NULL)
     {
         ATLTRACE(atlTraceRefcount, 0, _T("CWorkThreadBase.ctor()\n"));
@@ -46,7 +52,8 @@ public:
         {
             AutoLock _(m_cs);
 
-            if (HasPlace())
+            T* pT = static_cast<T*>(this);
+            if (pT->HasPlace())
             {
                 m_ConnPending.push_back(s);
                 // Checks the suspend count of the thread. If the suspend count is zero, the thread is not currently suspended.
@@ -68,15 +75,15 @@ public:
         return (NULL != m_h);
     }
 
+public:
+    // overridables
+
     bool HasPlace(void) const throw()
     {
         // @WARNING: reading of aligned field is atomic. synchronization is not required.
         // see Intel 325462, 8.1.1 Guaranteed Atomic Operations
-        return (NUM_CONNECTIONS > (m_nConnUsed + m_ConnPending.size())) ;
+        return (THREAD_CONNECTIONS > (m_nConnSockets + m_ConnPending.size()));
     }
-
-public:
-    // overridables
 
     void Destroy(void) throw() {}
 
@@ -88,82 +95,91 @@ public:
         {
             LONG events = (FD_CLOSE | FD_READ | FD_WRITE);
 
-            if (m_nConnUsed < 1 && !AcceptHelper(events))
+            if (m_nConnSockets < 1 && !AcceptHelper(events))
             {
-                ::Sleep(WORKER_WAIT);
+                ::Sleep(WORKER_DELAY);
                 continue;
             }
 
-            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
-
-            if (idx == WSA_WAIT_FAILED)
-            {
-                DisplayError(_T("WSAWaitForMultipleEvents() failed."));
-                continue;
-            }
-            else if (idx == WSA_WAIT_TIMEOUT)
+            for (DWORD offs = 0; offs < m_nConnSockets; offs += WSA_MAXIMUM_WAIT_EVENTS)
             {
                 if (CQuit::yes()) break;
 
-                AcceptHelper(events);
-                continue;
-            }
+                LPCWSAEVENT ev = m_sockEvents[offs];
 
-            // one socket fired event
-            idx -= WSA_WAIT_EVENT_0;
+                DWORD cnt = min((DWORD)(m_nConnSockets - offs), (DWORD)WSA_MAXIMUM_WAIT_EVENTS);
+                DWORD idx = ::WSAWaitForMultipleEvents(cnt, ev, FALSE, WSA_WAIT, FALSE);
 
-            WSANETWORKEVENTS ne = {0};
-
-            if (!m_arrSockets[idx].EnumEvents(m_sockEvents[idx], &ne))
-            {
-                DisplayError(_T("CSocketAsync.EnumEvents() failed."));
-                continue;
-            }
-            else if (ne.lNetworkEvents & FD_READ)
-            {
-                MSG(2, _T("FD_READ event fired\n"));
-
-                if (ne.iErrorCode[FD_READ_BIT] != 0)
+                if (idx == WSA_WAIT_FAILED)
                 {
-                    DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);
+                    DisplayError(_T("WSAWaitForMultipleEvents() failed."));
+                    continue;
+                }
+                else if (idx == WSA_WAIT_TIMEOUT)
+                {
+                    if (CQuit::yes()) break;
+
+                    AcceptHelper(events);
                     continue;
                 }
 
-                if (ReadData(m_arrSockets[idx]) == SOCKET_ERROR)
-                {
-                    Remove(idx);
-                }
-            }
-            else if (ne.lNetworkEvents & FD_WRITE)
-            {
-                MSG(2, _T("FD_WRITE event fired\n"));
+                // one socket fired event
+                idx = idx + offs - WSA_WAIT_EVENT_0;
 
-                if (ne.iErrorCode[FD_WRITE_BIT] != 0)
+                WSANETWORKEVENTS ne = {0};
+
+                if (!m_arrSockets[idx].EnumEvents(m_sockEvents[idx], &ne))
                 {
-                    DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
+                    DisplayError(_T("CSocketAsync.EnumEvents() failed."));
                     continue;
                 }
-
-                if (SendData(m_arrSockets[idx]) == SOCKET_ERROR)
+                else if (ne.lNetworkEvents & FD_READ)
                 {
+                    MSG(2, _T("FD_READ event fired\n"));
+
+                    if (ne.iErrorCode[FD_READ_BIT] != 0)
+                    {
+                        DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);
+                        continue;
+                    }
+
+                    if (ReadData(m_arrSockets[idx]) == SOCKET_ERROR)
+                    {
+                        Remove(idx);
+                    }
+                }
+                else if (ne.lNetworkEvents & FD_WRITE)
+                {
+                    MSG(2, _T("FD_WRITE event fired\n"));
+
+                    if (ne.iErrorCode[FD_WRITE_BIT] != 0)
+                    {
+                        DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
+                        continue;
+                    }
+
+                    if (SendData(m_arrSockets[idx]) == SOCKET_ERROR)
+                    {
+                        Remove(idx);
+                    }
+                }
+                else if (ne.lNetworkEvents & FD_CLOSE)
+                {
+                    MSG(2, _T("FD_CLOSE event fired\n"));
+
+                    if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
+                    {
+                        DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
+
+                        WSAECONNRESET; // connection was reset by the remote side
+                        WSAECONNABORTED; // connection was terminated due to a timeout or other failure
+                    }
+                    m_arrSockets[idx].Shutdown(SD_SEND);
+
                     Remove(idx);
                 }
-            }
-            else if (ne.lNetworkEvents & FD_CLOSE)
-            {
-                MSG(2, _T("FD_CLOSE event fired\n"));
 
-                if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
-                {
-                    DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
-
-                    WSAECONNRESET; // connection was reset by the remote side
-                    WSAECONNABORTED; // connection was terminated due to a timeout or other failure
-                }
-                m_arrSockets[idx].Shutdown(SD_SEND);
-
-                Remove(idx);
-            }
+            } // for()
 
         } // while()
 
@@ -183,7 +199,7 @@ protected:
 
         if (m_ConnPending.empty()) return false;
 
-        UINT m = m_nConnUsed;
+        UINT m = m_nConnSockets;
 
         while (!m_ConnPending.empty())
         {
@@ -194,27 +210,16 @@ protected:
             }
             m_ConnPending.pop_front(); ++m;
         }
-        m_nConnUsed = m;
+        m_nConnSockets = m;
 
         return true;
     }
-    void ShutThread(void) throw()
-    {
-        while (m_h != NULL)
-        {
-            if (CQuit::run()) { CQuit::set(); }
 
-            ::ResumeThread(m_h);
-            ::Sleep(1); // give others a chance..
-        }
-    }
-
-private:
     bool Remove(UINT n) throw()
     {
-        UINT m = m_nConnUsed - 1;
+        UINT m = m_nConnSockets - 1;
 
-        if (m_nConnUsed < 1 || n > m) return false;
+        if (m_nConnSockets < 1 || n > m) return false;
 
         Lock();
 
@@ -229,7 +234,7 @@ private:
             m_sockEvents[m].Close();
         }
 
-        m_nConnUsed = m;
+        m_nConnSockets = m;
 
         Unlock();
 
@@ -238,6 +243,18 @@ private:
         return true;
     }
 
+    void ShutThread(void) throw()
+    {
+        while (m_h != NULL)
+        {
+            if (CQuit::run()) { CQuit::set(); }
+
+            ::ResumeThread(m_h);
+            ::Sleep(1); // give others a chance..
+        }
+    }
+
+private:
     static UINT WINAPI _ThreadProc(void* pv)
     {
         T* pT = static_cast<T*>(pv);
@@ -251,17 +268,17 @@ private:
 public:
     static size_t MaxConnections(void) throw()
     {
-        return NUM_CONNECTIONS;
+        return THREAD_CONNECTIONS;
     }
 
 protected:
-    UINT m_nConnUsed; // number of connected sockets
+    UINT m_nConnSockets; // number of connected sockets
 
     // good for memory usage
     std::list<SOCKET> m_ConnPending;
 
-    CSocketAsync m_arrSockets[NUM_CONNECTIONS];
-    CSocketEvent m_sockEvents[NUM_CONNECTIONS];
+    CSocketAsync m_arrSockets[THREAD_CONNECTIONS];
+    CSocketEvent m_sockEvents[THREAD_CONNECTIONS];
 
 private:
     HANDLE m_h; // thread handle
@@ -270,7 +287,7 @@ private:
 };
 
 
-class CWorkThreadTcp : public CWorkThreadBase<CWorkThreadTcp, CTransmitTcp>
+class CWorkThreadTcp : public CWorkThreadBase<CWorkThreadTcp, CTransmitTcp, WSA_MAXIMUM_WAIT_EVENTS * 16>
 {
 public:
     CWorkThreadTcp()
@@ -346,6 +363,13 @@ public:
 public:
     // overridables
 
+    bool HasPlace(void) const throw()
+    {
+        // @WARNING: reading of aligned field is atomic. synchronization is not required.
+        // see Intel 325462, 8.1.1 Guaranteed Atomic Operations
+        return (WSA_MAXIMUM_WAIT_EVENTS > (m_nConnSockets + m_ConnPending.size()));
+    }
+
     UINT ThreadProc(void) throw()
     {
         ATLTRACE(_T(">> Listener thread run (%p)\n"), this);
@@ -354,13 +378,13 @@ public:
         {
             LONG events = (FD_ACCEPT | FD_CLOSE /*| FD_CONNECT*/);
 
-            if (m_nConnUsed < 1 && !AcceptHelper(events))
+            if (m_nConnSockets < 1 && !AcceptHelper(events))
             {
-                ::Sleep(WORKER_WAIT);
+                ::Sleep(WORKER_DELAY);
                 continue;
             }
 
-            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnUsed, m_sockEvents[0], FALSE, WORKER_WAIT, FALSE);
+            DWORD idx = ::WSAWaitForMultipleEvents(m_nConnSockets, m_sockEvents[0], FALSE, WORKER_DELAY, FALSE);
   
             if (idx == WSA_WAIT_FAILED)
             {

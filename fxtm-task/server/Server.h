@@ -92,7 +92,7 @@ private:
 
 class CServerTcp : public CServerBase<CServerTcp, CLog>
 {
-    static const size_t MAXIMUM_CONCURRENT_CONNECTIONS = 256;//4000;
+    static const size_t MAXIMUM_CONCURRENT_CONNECTIONS = 4096;
 
 public:
     CServerTcp() : m_MaxSockCnt(MAXIMUM_CONCURRENT_CONNECTIONS)
@@ -111,7 +111,8 @@ public:
 #ifdef _DEBUG
         MSG(0, _T("Greetings from TCP Server!\n\n"));
 #endif
-        ERR(_T("\nStarted: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
+        ERR(_T("Started: %s\n\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
+        ERR(_T("connections maximum: %Iu, connections per thread: %Iu, connection wait, ms: %u\n\n"), m_MaxSockCnt, CWorkThreadTcp::MaxConnections(), CWorkThreadTcp::WSA_WAIT);
 
         if (!CreateWorkers()) return errno; // cannot start threads
         // errno is set to EAGAIN if there are too many threads,
