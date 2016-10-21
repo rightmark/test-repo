@@ -30,6 +30,7 @@ class CExeModule
 public:
     CExeModule()
         : m_bPause(false)
+        , m_connects(1)
         , m_clientid(0)
         , m_requests(1)
         , m_delaytik(0)
@@ -49,68 +50,76 @@ public:
 #endif
             ERR(_T("\nStarted: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
             ERR(_T("parameters: ip=%s, port=%s (%s, %s)\n"), (LPCTSTR)m_addr, (LPCTSTR)m_port, PStr(m_socktype), FStr(m_family));
-            ERR(_T("requests: %u, delay ticks: %u, working time: %u\n\n"), m_requests, m_delaytik, m_worktime);
+            ERR(_T("connections: %u, requests: %u, delay ticks: %u, working time: %u\n\n"), m_connects, m_requests, m_delaytik, m_worktime);
 
-            CAddrInfo ai(m_addr, m_port, m_socktype, m_family);
 
-            TCHAR hostname[MAX_ADDRSTRLEN];
-            PADDRINFOT pai = ai;
+            m_ConnSocket.resize(m_connects);
+            m_evConnects.resize(m_connects);
 
-            for (; pai != NULL; pai = pai->ai_next)
+            for (UINT conn = 0; conn < m_connects; ++conn)
             {
-                CSocketAsync socket;
+                CAddrInfo ai(m_addr, m_port, m_socktype, m_family);
 
-                if ((pai->ai_family != AF_INET) && (pai->ai_family != AF_INET6)) continue;
+                TCHAR hostname[MAX_ADDRSTRLEN];
+                PADDRINFOT pai = ai;
 
-                if (!socket.Create(pai))
+                for (; pai != NULL; pai = pai->ai_next)
                 {
-                    DisplayError(_T("CSocketAsync.Create() failed."));
-                    continue;
+                    CSocketAsync socket;
+
+                    if ((pai->ai_family != AF_INET) && (pai->ai_family != AF_INET6)) continue;
+
+                    if (!socket.Create(pai))
+                    {
+                        DisplayError(_T("CSocketAsync.Create() failed."));
+                        continue;
+                    }
+
+                    if (::GetNameInfo(pai->ai_addr, (int)pai->ai_addrlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST) != NO_ERROR)
+                    {
+                        _tcscpy_s(hostname, _countof(hostname), UNKNOWN_NAME);
+                    }
+
+                    MSG(2, _T("Attempting to connect to: %s\n"), hostname);
+
+                    if (socket.Connect(pai))
+                    {
+                        m_ConnSocket[conn] = socket;
+                        break;
+                    }
+
+                    DisplayError(_T("CSocketAsync.Connect() failed."));
+
+                } // for()
+
+                if (pai == NULL)
+                {
+                    ERR(_T("Fatal error: unable to connect to the server.\n"));
+                    return ERROR_FATAL_APP_EXIT;
                 }
 
-                if (::GetNameInfo(pai->ai_addr, (int)pai->ai_addrlen, hostname, _countof(hostname), NULL, 0, NI_NUMERICHOST) != NO_ERROR)
+                // socket connection details..
+
+                PSOCKADDR psa = NULL;
+
+                // remote address and port
+                if (m_ConnSocket[conn].NameInfo(psa, hostname, _countof(hostname)) != NO_ERROR)
                 {
                     _tcscpy_s(hostname, _countof(hostname), UNKNOWN_NAME);
                 }
+                MSG(0, _T("Connected to %s, port %u, (%s, %s)\n"), hostname, ntohs(SS_PORT(psa)), PStr(pai->ai_socktype), FStr(pai->ai_family));
 
-                MSG(0, _T("Attempting to connect to: %s\n"), hostname);
+                // local address and port the system picked
+                SOCKADDR_STORAGE addr;
+                int addrlen = sizeof(addr);
 
-                if (socket.Connect(pai))
+                if (getsockname(m_ConnSocket[conn], (PSOCKADDR)&addr, &addrlen) != SOCKET_ERROR)
                 {
-                    m_ConnSocket = socket;
-                    break;
+                    LPCTSTR p = InetNtop(pai->ai_family, INETADDR_ADDRESS((PSOCKADDR)&addr), hostname, _countof(hostname));
+                    MSG(0, _T("Using local address %s, port %u\n"), p ? p : UNKNOWN_NAME, ntohs(SS_PORT(&addr)));
                 }
 
-                DisplayError(_T("CSocketAsync.Connect() failed."));
-
-            } // for()
-
-            if (pai == NULL)
-            {
-                ERR(_T("Fatal error: unable to connect to the server.\n"));
-                return ERROR_FATAL_APP_EXIT;
-            }
-
-            // socket connection details..
-
-            PSOCKADDR psa = NULL;
-
-            // remote address and port
-            if (m_ConnSocket.NameInfo(psa, hostname, _countof(hostname)) != NO_ERROR)
-            {
-                _tcscpy_s(hostname, _countof(hostname), UNKNOWN_NAME);
-            }
-            MSG(0, _T("Connected to %s, port %u, (%s, %s)\n"), hostname, ntohs(SS_PORT(psa)), PStr(pai->ai_socktype), FStr(pai->ai_family));
-
-            // local address and port the system picked
-            SOCKADDR_STORAGE addr;
-            int addrlen = sizeof(addr);
-
-            if (getsockname(m_ConnSocket, (PSOCKADDR)&addr, &addrlen) != SOCKET_ERROR)
-            {
-                LPCTSTR p = InetNtop(pai->ai_family, INETADDR_ADDRESS((PSOCKADDR)&addr), hostname, _countof(hostname));
-                MSG(0, _T("Using local address %s, port %u\n"), p ? p : UNKNOWN_NAME, ntohs(SS_PORT(&addr)));
-            }
+            } // for (conn)
 
             m_bConnected = true;
         }
@@ -123,8 +132,11 @@ public:
         {
             DisplayData(true); // display statistics..
 
-            m_ConnSocket.Close();
-            m_ev.Close();
+            for (auto& it : m_ConnSocket) { it.Close(); }
+            for (auto& it : m_evConnects) { it.Close(); }
+
+            m_ConnSocket.clear();
+            m_evConnects.clear();
 
             m_bConnected = false;
         }
@@ -138,26 +150,36 @@ public:
         // Set Ctrl+C, Ctrl+Break handler
         CCtrlHandler ctrl(_CtrlHandler);
 
-        if (!m_ev.Create())
-        {
-            return DisplayError(_T("CSocketEvent.Create() failed."));
-        }
+        LONG events = (FD_READ | FD_WRITE | FD_CLOSE);
 
-        if (!m_ConnSocket.SelectEvents(m_ev, FD_READ | FD_WRITE | FD_CLOSE))
+        for (UINT conn = 0; conn < m_connects; ++conn)
         {
-            return DisplayError(_T("CSocketAsync.SelectEvents() failed."));
-        }
+            CSocketEvent ev;
+            if (!ev.Create())
+            {
+                return DisplayError(_T("CSocketEvent.Create() failed."));
+            }
+            m_evConnects[conn] = ev;
 
-        DWORD timeout = CLIENT_TIMEOUT / CLIENT_WAIT;
-        DWORD timeoutcnt = 0;
+            if (!m_ConnSocket[conn].SelectEvents(m_evConnects[conn], events))
+            {
+                return DisplayError(_T("CSocketAsync.SelectEvents() failed."));
+            }
+
+        } // for()
+
         DWORD requestcnt = 0;
+        DWORD requestmax = m_requests * m_connects;
+        DWORD sockclosed = 0;
+        DWORD timeoutcnt = 0;
+        DWORD timeout = CLIENT_TIMEOUT / CLIENT_WAIT;
 
-        USHORT lkey = 0; // last random key sent..
         UINT64 tick = 0;
+        vector<USHORT> lastkey(m_connects, 0); // last random key sent..
 
         if (m_worktime > 0)
         {
-            m_requests = (UINT_MAX - 1);// "infinite"
+            requestmax = (UINT_MAX - 1); // "infinite"
             tick = ::GetTickCount64() + m_worktime * 1000;
         }
 
@@ -169,111 +191,125 @@ public:
                 // wait for FD_CLOSE event on success..
                 if (!Shutdown()) break; // immediate non-graceful closure
             }
+            if (sockclosed >= m_connects) break; // job done
 
-            DWORD idx = ::WSAWaitForMultipleEvents(1, m_ev, FALSE, CLIENT_WAIT, FALSE);
-
-            if (idx == WSA_WAIT_FAILED)
+            for (DWORD offs = 0; offs < m_ConnSocket.size(); offs += WSA_MAXIMUM_WAIT_EVENTS)
             {
-                return DisplayError(_T("WSAWaitForMultipleEvents() failed."));
-            }
-            else if (idx == WSA_WAIT_TIMEOUT)
-            {
-                if (++timeoutcnt < timeout) continue;
+                if (CQuit::yes()) break;
 
-                return ERROR_TIMEOUT;
-            }
-            timeoutcnt = 0; // reset
+                LPCWSAEVENT pev = (LPCWSAEVENT)m_evConnects.data();
 
-            WSANETWORKEVENTS ne = {0};
-            if (!m_ConnSocket.EnumEvents(m_ev, &ne))
-            {
-                DisplayError(_T("CSocketAsync.EnumEvents() failed."));
-                continue;
-            }
-            else if (ne.lNetworkEvents & FD_READ)
-            {
-                MSG(2, _T("FD_READ event fired\n"));
+                DWORD cnt = min((DWORD)(m_evConnects.size() - offs), (DWORD)WSA_MAXIMUM_WAIT_EVENTS);
+                DWORD idx = ::WSAWaitForMultipleEvents(cnt, pev, FALSE, CLIENT_WAIT, FALSE);
 
-                if (ne.iErrorCode[FD_READ_BIT] != 0)
+                if (idx == WSA_WAIT_FAILED)
                 {
-                    return DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);
+                    return DisplayError(_T("WSAWaitForMultipleEvents() failed."));
                 }
-
-                DATABOXT box = {0};
-
-                int len = DATABOX_SIZE_READ;
-
-                if (ReadData(box.buffer, len) == SOCKET_ERROR)
-                    return SOCKET_ERROR;
-
-                if (DATABOX_SIZE_READ != len || box.pkg.anchor != ANCHOR)
-                    continue; // skip unsupported data
-
-                if (lkey != htons(box.pkg.keyval))
+                else if (idx == WSA_WAIT_TIMEOUT)
                 {
-                    ERR(_T("Key mismatch: sent %u, received %u\n"), lkey, htons(box.pkg.keyval));
+                    if (++timeoutcnt < timeout) continue;
+
+                    return ERROR_TIMEOUT;
                 }
+                timeoutcnt = 0; // reset
 
-                if (m_delaytik > 0) { ::Sleep(m_delaytik); }
+                // one socket fired event
+                idx = idx + offs - WSA_WAIT_EVENT_0;
 
-                if (requestcnt >= m_requests)
+                WSANETWORKEVENTS ne = {0};
+                if (!m_ConnSocket[idx].EnumEvents(m_evConnects[idx], &ne))
                 {
-                    MSG(0, _T("Request limit (%i) is reached\n"), m_requests);
-                    // wait for FD_CLOSE event on success..
-                    if (Shutdown()) continue;
-
-                    break; // immediate non-graceful closure
+                    DisplayError(_T("CSocketAsync.EnumEvents() failed."));
+                    continue;
                 }
-
-                box.pkg.anchor = ANCHOR;
-                box.pkg.keyval = ntohs((USHORT)m_rg.number());
-
-                len = DATABOX_SIZE_SEND;
-
-                if (SendData(box.buffer, len) == SOCKET_ERROR)
-                    return SOCKET_ERROR;
-
-                ++requestcnt;
-
-                lkey = htons(box.pkg.keyval);
-                MSG(0, _T("Sent %i bytes, key=%u\n"), len, lkey);
-            }
-            else if (ne.lNetworkEvents & FD_WRITE)
-            {
-                MSG(2, _T("FD_WRITE event fired\n"));
-
-                if (ne.iErrorCode[FD_WRITE_BIT] != 0)
+                else if (ne.lNetworkEvents & FD_READ)
                 {
-                    return DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
+                    MSG(2, _T("FD_READ event fired\n"));
+
+                    if (ne.iErrorCode[FD_READ_BIT] != 0)
+                    {
+                        return DisplayError(_T("FD_READ failed."), ne.iErrorCode[FD_READ_BIT]);
+                    }
+
+                    DATABOXT box = {0};
+
+                    int len = DATABOX_SIZE_READ;
+
+                    if (ReadData(m_ConnSocket[idx], box.buffer, len) == SOCKET_ERROR)
+                        return SOCKET_ERROR;
+
+                    if (DATABOX_SIZE_READ != len || box.pkg.anchor != ANCHOR)
+                        continue; // skip unsupported data
+
+                    if (lastkey[idx] != htons(box.pkg.keyval))
+                    {
+                        ERR(_T("Key mismatch: sent %u, received %u\n"), lastkey[idx], htons(box.pkg.keyval));
+                    }
+
+                    if (m_delaytik > 0) { ::Sleep(m_delaytik); }
+
+                    if (requestcnt >= requestmax)
+                    {
+                        MSG(0, _T("Request limit (%i) is reached\n"), m_requests);
+                        // wait for FD_CLOSE event on success..
+                        if (Shutdown(m_ConnSocket[idx])) continue;
+
+                        break; // immediate non-graceful closure
+                    }
+
+                    box.pkg.anchor = ANCHOR;
+                    box.pkg.keyval = ntohs((USHORT)m_rg.number());
+
+                    len = DATABOX_SIZE_SEND;
+
+                    if (SendData(m_ConnSocket[idx], box.buffer, len) == SOCKET_ERROR)
+                    {
+                        ++sockclosed; continue;
+                    }
+                    ++requestcnt;
+
+                    lastkey[idx] = htons(box.pkg.keyval);
+                    MSG(0, _T("Sent %i bytes, key=%u\n"), len, lastkey[idx]);
                 }
-
-                DATABOXT box;
-                box.pkg.anchor = ANCHOR;
-                box.pkg.keyval = ntohs((USHORT)m_rg.number()); // @WARNING: a new one random value send.
-
-                int len = DATABOX_SIZE_SEND;
-
-                if (SendData(box.buffer, len) == SOCKET_ERROR)
-                    return SOCKET_ERROR;
-
-                ++requestcnt;
-
-                lkey = htons(box.pkg.keyval);
-                MSG(0, _T("Sent %i bytes, key=%u\n"), len, lkey);
-            }
-            else if (ne.lNetworkEvents & FD_CLOSE)
-            {
-                MSG(2, _T("FD_CLOSE event fired\n"));
-                if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
+                else if (ne.lNetworkEvents & FD_WRITE)
                 {
-                    return DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
+                    MSG(2, _T("FD_WRITE event fired\n"));
+
+                    if (ne.iErrorCode[FD_WRITE_BIT] != 0)
+                    {
+                        return DisplayError(_T("FD_WRITE failed."), ne.iErrorCode[FD_WRITE_BIT]);
+                    }
+
+                    DATABOXT box;
+                    box.pkg.anchor = ANCHOR;
+                    box.pkg.keyval = ntohs((USHORT)m_rg.number()); // @WARNING: a new one random value send.
+
+                    int len = DATABOX_SIZE_SEND;
+
+                    if (SendData(m_ConnSocket[idx], box.buffer, len) == SOCKET_ERROR)
+                    {
+                        ++sockclosed; continue;
+                    }
+                    ++requestcnt;
+
+                    lastkey[idx] = htons(box.pkg.keyval);
+                    MSG(0, _T("Sent %i bytes, key=%u\n"), len, lastkey[idx]);
                 }
-                MSG(0, _T("Server closed connection\n"));
+                else if (ne.lNetworkEvents & FD_CLOSE)
+                {
+                    MSG(2, _T("FD_CLOSE event fired\n"));
+                    if (ne.iErrorCode[FD_CLOSE_BIT] != 0)
+                    {
+                        return DisplayError(_T("FD_CLOSE failed."), ne.iErrorCode[FD_CLOSE_BIT]);
+                    }
+                    MSG(0, _T("Server closed connection\n"));
 
-                break;
-            }
+                    ++sockclosed;
+                }
+                DisplayData(false); // display statistics..
 
-            DisplayData(false); // display statistics..
+            } // for (offs)
 
         } // while()
 
@@ -294,6 +330,8 @@ public:
             m_family = (f == 4) ? AF_INET : (f == 6) ? AF_INET6 : DEFAULT_FAMILY;
 
             m_bPause = !!::GetPrivateProfileInt(_T("client"), _T("pause"), m_bPause, path);
+
+            m_connects = ::GetPrivateProfileInt(_T("client"), _T("connections"), m_connects, path);
             m_delaytik = ::GetPrivateProfileInt(_T("client"), _T("delaytick"), m_delaytik, path);
             m_worktime = ::GetPrivateProfileInt(_T("client"), _T("worktime"), m_worktime, path);
 
@@ -323,9 +361,9 @@ public:
 protected:
     // helper methods
 
-    int ReadData(char* buf, int& len) throw()
+    int ReadData(CSocketAsync& s, char* buf, int& len) throw()
     {
-        int bytes = recv(m_ConnSocket, buf, len, 0);
+        int bytes = recv(s, buf, len, 0);
         if (bytes == SOCKET_ERROR)
         {
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
@@ -346,7 +384,7 @@ protected:
             CString str(buf, bytes);
             for (;;)
             {
-                int cb = recv(m_ConnSocket, buf, len, 0);
+                int cb = recv(s, buf, len, 0);
                 if (cb == SOCKET_ERROR)
                 {
                     if (::WSAGetLastError() != WSAEWOULDBLOCK)
@@ -368,9 +406,9 @@ protected:
         return ERROR_SUCCESS;
     }
 
-    int SendData(const char* buf, int& len) throw()
+    int SendData(CSocketAsync& s, const char* buf, int& len) throw()
     {
-        int bytes = send(m_ConnSocket, buf, len, 0);
+        int bytes = send(s, buf, len, 0);
         if (bytes == SOCKET_ERROR)
         {
             if (::WSAGetLastError() != WSAEWOULDBLOCK)
@@ -389,24 +427,31 @@ protected:
 
     bool Shutdown(void) throw()
     {
+        bool b = false;
+        for (auto& it : m_ConnSocket) { b = Shutdown(it); }
+
+        return b;
+    }
+    bool Shutdown(CSocketAsync& s) throw()
+    {
         char buf[BUFFER_SIZE] = {0};
         int len = sizeof(buf);
 
         if (m_socktype == SOCK_DGRAM)
         {
             // signal to UDP server we are finishing..
-            if (send(m_ConnSocket, buf, 0, 0) == SOCKET_ERROR)
+            if (send(s, buf, 0, 0) == SOCKET_ERROR)
             {
                 DisplayError(_T("send() failed."));
             }
         }
 
-        if (m_ConnSocket.Shutdown(SD_SEND))
+        if (s.Shutdown(SD_SEND))
         {
             if (m_socktype == SOCK_STREAM)
             {
                 // Since TCP does not preserve message boundaries, there may still be more data arriving from the server.
-                while (recv(m_ConnSocket, buf, len, 0) > 0);
+                while (recv(s, buf, len, 0) > 0);
 
                 MSG(2, _T("Done sending\n"));
 
@@ -446,14 +491,15 @@ protected:
 public:
     bool m_bPause;      // "press any key" on exit..
 
+    UINT m_connects;    // number of client connections (same address/port)
     UINT m_clientid;
     UINT m_requests;
     UINT m_delaytik;    // delay between requests, ms (client)
     UINT m_worktime;    // total working time, s (client)
 
 private:
-    CSocketAsync m_ConnSocket;
-    CSocketEvent m_ev;
+    std::vector<CSocketAsync> m_ConnSocket;
+    std::vector<CSocketEvent> m_evConnects;
 
     RandomGenerator m_rg;
 };

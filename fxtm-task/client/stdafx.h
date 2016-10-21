@@ -7,6 +7,8 @@
 
 #include "targetver.h"
 
+// STL
+#include <algorithm>
 #include <exception>
 #include <chrono>
 #include <random>

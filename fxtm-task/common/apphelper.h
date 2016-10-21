@@ -9,7 +9,7 @@
 
 // Application defines
 #ifdef _DEBUG
-#define MSG_LEVEL           3 // verbosity level (messages with level below are displayed)
+#define MSG_LEVEL           4 // verbosity level (messages with level below are displayed)
 #else
 #define MSG_LEVEL           2 // verbosity level (messages with level below are displayed)
 #endif // _DEBUG
@@ -122,7 +122,7 @@ protected:
 
         MSG(0, _T("\nUsage: %s [-f 4|6] [-p port] [-s addr] [-t udp|tcp] [-b size]"), (LPCTSTR)name);
 #ifdef _CLIENT_BUILD_ // client only parameters
-        MSG(0, _T(" [-n number] [-d ticks] [-i id] [-w time]\n"));
+        MSG(0, _T(" [-c number] [-n number] [-d ticks] [-i id] [-w time]\n"));
 #else
         MSG(0, _T("\n"));
 #endif
@@ -132,6 +132,7 @@ protected:
         MSG(0, _T("  -t tcp|udp Transport protocol to use (default: UDP)\n"));
         MSG(0, _T("  -b size    Buffer size for send/recv (default: %u)\n"), BUFFER_SIZE);
 #ifdef _CLIENT_BUILD_ // client only parameters
+        MSG(0, _T("  -c number  Number of client concurrent connections. (default: 1)\n"));
         MSG(0, _T("  -n number  Number of requests to perform. (default: 1, 0 - infinite)\n"));
         MSG(0, _T("  -d ticks   Delay in ms between server requests. (default: 0)\n"));
         MSG(0, _T("  -i id      Unique client id\n"));
@@ -244,6 +245,17 @@ protected:
                 return DisplayHelp(argv[0]);
 
 #ifdef _CLIENT_BUILD_ // client only parameters
+            case 'c':
+                if (i < argc)
+                {
+                    ULONG ul = _tcstoul(argv[i], 0, 0);
+                    if (errno == 0)
+                    {
+                        pT->m_connects = ul; break;
+                    }
+                }
+                return DisplayHelp(argv[0]);
+
             case 'd':
                 if (i < argc)
                 {

@@ -185,10 +185,10 @@ private:
 // ok, the standard ATL::CEvent class could be used surely.
 // this custom wrapper is used instead to avoid one more dependency on ATL and make code more WSA-specific.
 //
+typedef const WSAEVENT *LPCWSAEVENT;
+
 class ATL_NO_VTABLE CSocketEvent
 {
-    typedef const WSAEVENT *LPCWSAEVENT;
-
 public:
     CSocketEvent() throw() : m_h(NULL) {}
     CSocketEvent(CSocketEvent& h) throw() : m_h(NULL) // copy-ctor

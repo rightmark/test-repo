@@ -20,8 +20,6 @@ class ATL_NO_VTABLE CWorkThreadBase
     typedef ATL::CComAutoCriticalSection AutoCriticalSection;
     typedef ATL::CComCritSecLock<AutoCriticalSection> AutoLock;
 
-    typedef const WSAEVENT *LPCWSAEVENT;
-
 protected:
     static const size_t THREAD_CONNECTIONS = t_N;
 
@@ -105,10 +103,10 @@ public:
             {
                 if (CQuit::yes()) break;
 
-                LPCWSAEVENT ev = m_sockEvents[offs];
+                LPCWSAEVENT pev = m_sockEvents[offs];
 
                 DWORD cnt = min((DWORD)(m_nConnSockets - offs), (DWORD)WSA_MAXIMUM_WAIT_EVENTS);
-                DWORD idx = ::WSAWaitForMultipleEvents(cnt, ev, FALSE, WSA_WAIT, FALSE);
+                DWORD idx = ::WSAWaitForMultipleEvents(cnt, pev, FALSE, WSA_WAIT, FALSE);
 
                 if (idx == WSA_WAIT_FAILED)
                 {
@@ -179,7 +177,7 @@ public:
                     Remove(idx);
                 }
 
-            } // for()
+            } // for (offs)
 
         } // while()
 
@@ -287,7 +285,7 @@ private:
 };
 
 
-class CWorkThreadTcp : public CWorkThreadBase<CWorkThreadTcp, CTransmitTcp, WSA_MAXIMUM_WAIT_EVENTS * 16>
+class CWorkThreadTcp : public CWorkThreadBase<CWorkThreadTcp, CTransmitTcp, WSA_MAXIMUM_WAIT_EVENTS * 16/* 1024 */>
 {
 public:
     CWorkThreadTcp()
