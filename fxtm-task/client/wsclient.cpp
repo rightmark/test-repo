@@ -169,10 +169,10 @@ public:
         } // for()
 
         DWORD requestcnt = 0;
-        DWORD requestmax = m_requests * m_connects;
-        DWORD sockclosed = 0;
+        DWORD requestmax = m_connects * m_requests;
+        DWORD sockopened = m_connects;
         DWORD timeoutcnt = 0;
-        DWORD timeout = CLIENT_TIMEOUT / CLIENT_WAIT;
+        DWORD timeoutmax = CLIENT_TIMEOUT / CLIENT_WAIT;
 
         UINT64 tick = 0;
         vector<USHORT> lastkey(m_connects, 0); // last random key sent..
@@ -191,9 +191,9 @@ public:
                 // wait for FD_CLOSE event on success..
                 if (!Shutdown()) break; // immediate non-graceful closure
             }
-            if (sockclosed >= m_connects) break; // job done
+            if (sockopened == 0) break; // job done
 
-            for (DWORD offs = 0; offs < m_ConnSocket.size(); offs += WSA_MAXIMUM_WAIT_EVENTS)
+            for (DWORD offs = 0; offs < m_connects; offs += WSA_MAXIMUM_WAIT_EVENTS)
             {
                 if (CQuit::yes()) break;
 
@@ -208,7 +208,7 @@ public:
                 }
                 else if (idx == WSA_WAIT_TIMEOUT)
                 {
-                    if (++timeoutcnt < timeout) continue;
+                    if (++timeoutcnt < timeoutmax) continue;
 
                     return ERROR_TIMEOUT;
                 }
@@ -265,7 +265,7 @@ public:
 
                     if (SendData(m_ConnSocket[idx], box.buffer, len) == SOCKET_ERROR)
                     {
-                        ++sockclosed; continue;
+                        --sockopened; continue;
                     }
                     ++requestcnt;
 
@@ -289,7 +289,7 @@ public:
 
                     if (SendData(m_ConnSocket[idx], box.buffer, len) == SOCKET_ERROR)
                     {
-                        ++sockclosed; continue;
+                        --sockopened; continue;
                     }
                     ++requestcnt;
 
@@ -305,7 +305,7 @@ public:
                     }
                     MSG(0, _T("Server closed connection\n"));
 
-                    ++sockclosed;
+                    --sockopened;
                 }
                 DisplayData(false); // display statistics..
 
