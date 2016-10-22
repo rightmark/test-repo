@@ -353,6 +353,10 @@ int _tmain(int argc, LPTSTR argv[])
                 nRet = _Module.Run();
             }
             _Module.Disconnect();
+#ifdef _DEBUG
+            MSG(0, _T("[%i] worker bye... \n"), _Module.InstanceCount());
+            ::Sleep(3000);
+#endif
         }
     }
     catch (int e)
@@ -368,9 +372,5 @@ int _tmain(int argc, LPTSTR argv[])
         ERR(_T("Exception caught: unspecified.\n"));
     }
 
-#ifdef _DEBUG
-    MSG(0, _T("[%i] worker bye... \n"), _Module.InstanceCount());
-    ::Sleep(3000);
-#endif
     return nRet;
 }

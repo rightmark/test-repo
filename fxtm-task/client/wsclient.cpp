@@ -513,7 +513,6 @@ int _tmain(int argc, LPTSTR argv[])
 
     try
     {
-
         nRet = _Module.LoadPreferences(argc, argv);
         if (nRet == ERROR_SUCCESS)
         {
@@ -529,6 +528,11 @@ int _tmain(int argc, LPTSTR argv[])
                 _Module.Disconnect();
 
             } while (nRet == ERROR_TIMEOUT);
+
+            if (_Module.m_bPause)
+            {
+                PAUSE(_T("\npress a key to exit...\n"));
+            }
         }
     }
     catch (int e)
@@ -542,11 +546,6 @@ int _tmain(int argc, LPTSTR argv[])
     catch (...)
     {
         ERR(_T("Exception caught: unspecified.\n"));
-    }
-
-    if (_Module.m_bPause)
-    {
-        PAUSE(_T("\npress a key to exit...\n"));
     }
 
     return nRet;

@@ -238,7 +238,7 @@ public:
 #ifdef _DEBUG
         MSG(0, _T("Greetings from UDP Server!\n\n"));
 #endif
-        ERR(_T("\nStarted: %s\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
+        ERR(_T("Started: %s\n\n"), (LPCTSTR)CTime::GetCurrentTime().Format(_T("%X")));
 
         if (!m_worker.Create(false)) return errno; // cannot start thread
         // errno is set to EAGAIN if there are too many threads,
