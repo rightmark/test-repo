@@ -185,13 +185,14 @@ public:
 
         while (CQuit::run())
         {
+            if (sockopened == 0) break; // all sockets closed. job done
+
             if (m_worktime > 0 && tick < ::GetTickCount64())
             {
                 MSG(0, _T("Working time (%i s) is elapsed\n"), m_worktime);
                 // wait for FD_CLOSE event on success..
                 if (!Shutdown()) break; // immediate non-graceful closure
             }
-            if (sockopened == 0) break; // job done
 
             for (DWORD offs = 0; offs < m_connects; offs += WSA_MAXIMUM_WAIT_EVENTS)
             {
@@ -253,9 +254,11 @@ public:
                     {
                         MSG(0, _T("Request limit (%i) is reached\n"), m_requests);
                         // wait for FD_CLOSE event on success..
-                        if (Shutdown(m_ConnSocket[idx])) continue;
-
-                        break; // immediate non-graceful closure
+                        if (!Shutdown(m_ConnSocket[idx]))
+                        {
+                            --sockopened; // UDP socket closed
+                        }
+                        continue;
                     }
 
                     box.pkg.anchor = ANCHOR;
