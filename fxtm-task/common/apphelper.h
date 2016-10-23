@@ -389,18 +389,16 @@ public:
 class CCtrlHandler
 {
 public:
-    CCtrlHandler()
-        : m_pHR(NULL)
+    CCtrlHandler() : m_pHR(NULL)
     {
         // causes the calling process to ignore CTRL+C input
         ::SetConsoleCtrlHandler(m_pHR, TRUE);
     }
-    CCtrlHandler(PHANDLER_ROUTINE handler, bool bWarn = true)
-        : m_pHR(handler)
+    CCtrlHandler(PHANDLER_ROUTINE handler, bool bWarn = true) : m_pHR(handler)
     {
         ::SetConsoleCtrlHandler(m_pHR, TRUE);
 
-        if (bWarn)
+        if (bWarn && handler)
         {
             MSG(0, _T("\n** Press Ctrl+C to terminate\n\n"));
         }
