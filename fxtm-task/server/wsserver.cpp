@@ -273,7 +273,7 @@ protected:
         // @TRICKY: reset instance counter to zero..
         if (InterlockedCompareExchange(&ms_instcnt, 0, ms_instcnt) > 0)
         {
-            // to avoid ICP race condition
+            // to avoid IPC race condition
             MSG(0, _T("\nStop signaled. Terminating...\n"));
         }
         CQuit::set();
