@@ -163,13 +163,29 @@ protected:
 
     bool GetIniFile(CPath& path) throw()
     {
-        TCHAR buf[_MAX_PATH] = {0};
-        if (::GetModuleFileName(NULL, buf, _MAX_PATH))
+        CString buf;
+        DWORD cch, len = _MAX_PATH;
+
+        for (;;)
         {
-            path = buf;
+            cch = ::GetModuleFileName(NULL, buf.GetBuffer(len), len);
+            // @WARNING: If the function succeeds, the return value is the length of the string that is copied to the buffer,
+            // in characters, not including the terminating null character. If the buffer is too small to hold the module name,
+            // the string is truncated to len characters including the terminating null character, the function returns len.
+            if (cch < len) break;
+
+            len *= 2;
+        }
+
+        if (cch > 0)
+        {
+            buf.ReleaseBuffer();
+            path = (LPCTSTR)buf;
             path.RenameExtension(_T(".ini"));
+
             return !!path.FileExists();
         }
+
         return false;
     }
 
@@ -423,6 +439,8 @@ class CQuit
 public:
     bool yes(void) const throw() { return ms_bQuit; }
     bool run(void) const throw() { return !yes(); }
+
+protected:
     // @WARNING: writing from the only source..
     static void set(void) throw() { ms_bQuit = true; }
 
@@ -470,7 +488,7 @@ public:
     }
     int max(void) const
     {
-        return distribution.min();
+        return distribution.max();
     }
 
 private:
