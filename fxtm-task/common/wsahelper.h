@@ -190,7 +190,11 @@ typedef const WSAEVENT *LPCWSAEVENT;
 class ATL_NO_VTABLE CSocketEvent
 {
 public:
-    CSocketEvent() throw() : m_h(NULL) {}
+    CSocketEvent() throw() : m_h(NULL)
+    {
+        // @WARNING: CSocketEvent array is WSAEVENT array wrapper. Do not add extra members !!
+        ATLASSUME(sizeof(CSocketEvent) == sizeof(m_h));
+    }
     CSocketEvent(CSocketEvent& h) throw() : m_h(NULL) // copy-ctor
     {
         Attach(h.Detach());

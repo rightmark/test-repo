@@ -26,6 +26,10 @@ The code is Winsock 2.2 only oriented.
 This example demonstrates the various techniques including meta-programming + interfaces + ATL.
 Preprocessor and conditional compilation are used as well.
 
+Note: current version was built against SDK 10.0.14393.0 (Windows 10).
+if you get the error <Cannot open include file: 'corecrt.h'>
+please correct the actual SDK version installed in Project settings (General->Target Platform Version).
+
 rightmark.development@gmail
 
 /////////////////////////////////////////////////////////////////////////////
