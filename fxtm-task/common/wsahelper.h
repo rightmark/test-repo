@@ -155,10 +155,12 @@ public:
 
     bool SelectEvents(WSAEVENT ev, LONG events) throw()
     {
+        // sets socket s to nonblocking mode, regardless of the value of events
         return (::WSAEventSelect(m_s, ev, events) != SOCKET_ERROR);
     }
     bool EnumEvents(WSAEVENT ev, LPWSANETWORKEVENTS ne) throw()
     {
+        // resets the event object and adjust the status of active FD events on the socket in an atomic fashion
         return (::WSAEnumNetworkEvents(m_s, ev, ne) != SOCKET_ERROR);
     }
     bool Shutdown(int how) throw()
