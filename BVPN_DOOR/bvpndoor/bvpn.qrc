@@ -1,0 +1,14 @@
+<RCC>
+  <qresource prefix="CBlinkVPN">
+    <file>Resources/Assets/SWE_flag.png</file>
+    <file>Resources/Assets/Quickconnect_btn.png</file>
+    <file>Resources/Assets/Quickconnect_btn_hover.png</file>
+    <file>Resources/Assets/Disconnect_btn.png</file>
+    <file>Resources/Assets/Disconnect_btn_hover.png</file>
+    <file>Resources/Assets/Login_normal.png</file>
+    <file>Resources/Assets/Login_hover.png</file>
+    <file>Resources/Assets/Logout_normal.png</file>
+    <file>Resources/Assets/Logout_hover.png</file>
+    <file>Resources/Assets/Logo.png</file>
+  </qresource>
+</RCC>
