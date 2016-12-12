@@ -18,8 +18,8 @@ Q_SIGNALS:
 
 protected:
     // overridables
-    void enterEvent(QEvent* e);
-    void leaveEvent(QEvent* e);
+    void enterEvent(QEvent*);
+    void leaveEvent(QEvent*);
     void mouseMoveEvent(QMouseEvent*);
     void mousePressEvent(QMouseEvent*);
     void mouseReleaseEvent(QMouseEvent*);
@@ -30,11 +30,12 @@ private:
     void OnEnter(void) Q_DECL_NOEXCEPT;
     void OnLeave(void) Q_DECL_NOEXCEPT;
 
+    void UpdateLabelText(const QString&, const QString&) Q_DECL_NOEXCEPT;
+
 private:
     bool m_bConnect;    // connection state
-    bool m_bHovered;
     bool m_bPressed;    // mouse button pressed
-    // text colors
+    // label text colors
     QColor m_clrConnect;
     QColor m_clrDisconnect;
 };

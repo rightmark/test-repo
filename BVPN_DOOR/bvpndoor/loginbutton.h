@@ -11,15 +11,15 @@ public:
     ~CLoginButton() Q_DECL_NOEXCEPT {}
 
 public Q_SLOTS:
-    void identified(const QString&);
+    void identified(QString);
 
 Q_SIGNALS:
     void click(bool);
 
 protected:
     // overridables
-    void enterEvent(QEvent* e);
-    void leaveEvent(QEvent* e);
+    void enterEvent(QEvent*);
+    void leaveEvent(QEvent*);
     void mouseMoveEvent(QMouseEvent*);
     void mousePressEvent(QMouseEvent*);
     void mouseReleaseEvent(QMouseEvent*);
@@ -28,7 +28,10 @@ private:
     // helper methods
     void OnEnter(void) Q_DECL_NOEXCEPT;
     void OnLeave(void) Q_DECL_NOEXCEPT;
-    void OnLogin(void) Q_DECL_NOEXCEPT;
+
+    void UpdateLoginText(const QString&) Q_DECL_NOEXCEPT;
+    void UpdateLogoutText(const QString&) Q_DECL_NOEXCEPT;
+    void UpdateLogoutText(const QString&, const QString&) Q_DECL_NOEXCEPT;
 
 private:
     bool m_bPressed;    // mouse button pressed

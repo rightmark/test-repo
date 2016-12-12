@@ -21,3 +21,9 @@ Q_IMPORT_PLUGIN(QICOPlugin)
 #pragma comment(lib, "platforms/qwindows.lib")
 #pragma comment(lib, "imageformats/qico.lib")
 #endif
+
+
+// tweaks
+#ifdef _DEBUG
+#define _TESTING_
+#endif

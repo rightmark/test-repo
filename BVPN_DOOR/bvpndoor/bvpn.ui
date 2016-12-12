@@ -83,7 +83,7 @@
     <rect>
      <x>256</x>
      <y>16</y>
-     <width>20</width>
+     <width>22</width>
      <height>20</height>
     </rect>
    </property>
@@ -103,7 +103,7 @@
     <pixmap resource="bvpn.qrc">:/CBlinkVPN/Resources/Assets/Login_normal.png</pixmap>
    </property>
    <property name="alignment">
-    <set>Qt::AlignCenter</set>
+    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
    </property>
    <property name="margin">
     <number>0</number>
@@ -239,11 +239,19 @@
    <class>CConnectButton</class>
    <extends>QLabel</extends>
    <header>connectbutton.h</header>
+   <slots>
+    <signal>click(bool)</signal>
+    <slot>connected(bool)</slot>
+   </slots>
   </customwidget>
   <customwidget>
    <class>CLoginButton</class>
    <extends>QLabel</extends>
    <header>loginbutton.h</header>
+   <slots>
+    <signal>click(bool)</signal>
+    <slot>identified(QString)</slot>
+   </slots>
   </customwidget>
  </customwidgets>
  <tabstops>

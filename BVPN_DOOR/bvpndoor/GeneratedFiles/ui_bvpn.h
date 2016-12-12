@@ -66,12 +66,12 @@ public:
         loginLabel->setTextInteractionFlags(Qt::NoTextInteraction);
         loginButton = new CLoginButton(BlinkVPNClass);
         loginButton->setObjectName(QStringLiteral("loginButton"));
-        loginButton->setGeometry(QRect(256, 16, 20, 20));
+        loginButton->setGeometry(QRect(256, 16, 22, 20));
         loginButton->setCursor(QCursor(Qt::PointingHandCursor));
         loginButton->setMouseTracking(true);
         loginButton->setFocusPolicy(Qt::TabFocus);
         loginButton->setPixmap(QPixmap(QString::fromUtf8(":/CBlinkVPN/Resources/Assets/Login_normal.png")));
-        loginButton->setAlignment(Qt::AlignCenter);
+        loginButton->setAlignment(Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter);
         loginButton->setMargin(0);
         logoImage = new QLabel(BlinkVPNClass);
         logoImage->setObjectName(QStringLiteral("logoImage"));
