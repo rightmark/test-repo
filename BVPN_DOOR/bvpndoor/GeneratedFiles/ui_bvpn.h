@@ -130,7 +130,7 @@ public:
 
     void retranslateUi(QWidget *BlinkVPNClass)
     {
-        BlinkVPNClass->setWindowTitle(QApplication::translate("BlinkVPNClass", "BlinkVPN", 0));
+        BlinkVPNClass->setWindowTitle(QApplication::translate("BlinkVPNClass", "BlinkVPN - test", 0));
         loginLabel->setText(QApplication::translate("BlinkVPNClass", "<html><head/><body><p><span style=\" color:#667391;\">Login</span></p></body></html>", 0));
         loginButton->setText(QString());
         logoImage->setText(QString());

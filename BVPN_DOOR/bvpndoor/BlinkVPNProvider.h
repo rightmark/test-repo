@@ -31,7 +31,7 @@ public:
     }
 
 private:
-    bool m_bConnect;
-    bool m_bLogin;
+    bool m_bConnect;    // VPN connection is active
+    bool m_bLogin;      // user is logged in
 };
 

@@ -15,6 +15,8 @@ void CLoginButton::identified(QString s)
 {
     qDebug() << ">> slot identified:" << s;
     m_strUserName = s;
+
+    OnEnter();
 }
 
 // overridables
