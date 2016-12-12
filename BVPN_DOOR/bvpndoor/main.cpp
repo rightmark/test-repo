@@ -1,11 +1,23 @@
 #include "stdafx.h"
-#include "bvpn.h"
+
 #include <QtWidgets/QApplication>
+#include "bvpn.h"
+
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    CBlinkVPN w;
-    w.show();
-    return a.exec();
+
+    try
+    {
+        CBlinkVPN w;
+        w.show();
+        return a.exec();
+    }
+    catch (const char* s)
+    {
+        QMessageBox::critical(0, "Error", QString(s));
+        return -1;
+    }
+
 }

@@ -2,16 +2,16 @@
 
 #include <QtWidgets/QLabel>
 
-class CConnectButton : public QLabel
+class CLoginButton : public QLabel
 {
     Q_OBJECT
 
 public:
-    CConnectButton(QWidget* parent);
-    ~CConnectButton() Q_DECL_NOEXCEPT {}
+    CLoginButton(QWidget* parent);
+    ~CLoginButton() Q_DECL_NOEXCEPT {}
 
 public Q_SLOTS:
-    void connected(bool);
+    void identified(const QString&);
 
 Q_SIGNALS:
     void click(bool);
@@ -26,15 +26,16 @@ protected:
 
 private:
     // helper methods
-    void OnConnect(void) Q_DECL_NOEXCEPT;
     void OnEnter(void) Q_DECL_NOEXCEPT;
     void OnLeave(void) Q_DECL_NOEXCEPT;
+    void OnLogin(void) Q_DECL_NOEXCEPT;
 
 private:
-    bool m_bConnect;    // connection state
-    bool m_bHovered;
     bool m_bPressed;    // mouse button pressed
-    // text colors
-    QColor m_clrConnect;
-    QColor m_clrDisconnect;
+
+    QString m_UserName; // user credentials to log in
+    // buddy label colors
+    QColor m_clrNorm;   // normal color
+    QColor m_clrHovr;   // hover color
+    QColor m_clrUser;   // user name span color
 };

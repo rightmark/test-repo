@@ -10,12 +10,12 @@
 #error 'Compilation requires multi-threaded environment
 #endif
 
-/*
-// @TODO: km 20161210 - static QT library should be prepared..
+#if !defined(QT_DLL) // statically linked Qt
 #if defined(_DLL) && !defined(_DEBUG)
 #error 'Compilation requires static multi-threaded CRT for Release build
 #endif
-*/
+#endif
+
 
 #if defined(_CHAR_UNSIGNED)
 #error 'Char type must be signed

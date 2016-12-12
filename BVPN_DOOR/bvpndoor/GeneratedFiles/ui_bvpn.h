@@ -18,6 +18,7 @@
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QWidget>
 #include "connectbutton.h"
+#include "loginbutton.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -25,7 +26,7 @@ class Ui_BlinkVPNClass
 {
 public:
     QLabel *loginLabel;
-    QLabel *loginButton;
+    CLoginButton *loginButton;
     QLabel *logoImage;
     QLabel *connectFlag;
     QLabel *connectImage;
@@ -52,7 +53,7 @@ public:
         BlinkVPNClass->setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
         loginLabel = new QLabel(BlinkVPNClass);
         loginLabel->setObjectName(QStringLiteral("loginLabel"));
-        loginLabel->setGeometry(QRect(40, 16, 200, 20));
+        loginLabel->setGeometry(QRect(19, 16, 221, 20));
         sizePolicy.setHeightForWidth(loginLabel->sizePolicy().hasHeightForWidth());
         loginLabel->setSizePolicy(sizePolicy);
         QFont font;
@@ -63,7 +64,7 @@ public:
         loginLabel->setFont(font);
         loginLabel->setAlignment(Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter);
         loginLabel->setTextInteractionFlags(Qt::NoTextInteraction);
-        loginButton = new QLabel(BlinkVPNClass);
+        loginButton = new CLoginButton(BlinkVPNClass);
         loginButton->setObjectName(QStringLiteral("loginButton"));
         loginButton->setGeometry(QRect(256, 16, 20, 20));
         loginButton->setCursor(QCursor(Qt::PointingHandCursor));
@@ -121,7 +122,7 @@ public:
     void retranslateUi(QWidget *BlinkVPNClass)
     {
         BlinkVPNClass->setWindowTitle(QApplication::translate("BlinkVPNClass", "BlinkVPN", 0));
-        loginLabel->setText(QApplication::translate("BlinkVPNClass", "<html><head/><body><p><span style=\" color:#667391;\">Login as </span><span style=\" color:#ffb823;\">User McName</span></p></body></html>", 0));
+        loginLabel->setText(QApplication::translate("BlinkVPNClass", "<html><head/><body><p><span style=\" color:#667391;\">Login</span></p></body></html>", 0));
         loginButton->setText(QString());
         logoImage->setText(QString());
         connectFlag->setText(QString());
