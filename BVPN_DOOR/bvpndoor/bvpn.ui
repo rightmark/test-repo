@@ -39,8 +39,7 @@
     <normaloff>Resources/qticon.ico</normaloff>Resources/qticon.ico</iconset>
   </property>
   <property name="styleSheet">
-   <string notr="true">CBlinkVPN{ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgb(56, 66, 90), stop:1 rgb(58, 68, 92)); }
-</string>
+   <string notr="true">CBlinkVPN{ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgb(56, 66, 90), stop:1 rgb(58, 68, 92)); }</string>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
@@ -232,6 +231,19 @@
     <set>Qt::NoTextInteraction</set>
    </property>
   </widget>
+  <widget class="CBlinkVPNProvider" name="provider" native="true">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>370</y>
+     <width>120</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+  </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -253,6 +265,18 @@
     <slot>identified(QString)</slot>
    </slots>
   </customwidget>
+  <customwidget>
+   <class>CBlinkVPNProvider</class>
+   <extends>QWidget</extends>
+   <header>BlinkVPNProvider.h</header>
+   <container>1</container>
+   <slots>
+    <signal>connectReply(bool)</signal>
+    <signal>loginReply(QString)</signal>
+    <slot>connectRequest(bool)</slot>
+    <slot>loginRequest(bool)</slot>
+   </slots>
+  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>loginButton</tabstop>
@@ -261,5 +285,70 @@
  <resources>
   <include location="bvpn.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>provider</sender>
+   <signal>connectReply(bool)</signal>
+   <receiver>connectButton</receiver>
+   <slot>connected(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>69</x>
+     <y>379</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>147</x>
+     <y>335</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>provider</sender>
+   <signal>loginReply(QString)</signal>
+   <receiver>loginButton</receiver>
+   <slot>identified(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>69</x>
+     <y>379</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>266</x>
+     <y>25</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>connectButton</sender>
+   <signal>click(bool)</signal>
+   <receiver>provider</receiver>
+   <slot>connectRequest(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>147</x>
+     <y>335</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>69</x>
+     <y>379</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>loginButton</sender>
+   <signal>click(bool)</signal>
+   <receiver>provider</receiver>
+   <slot>loginRequest(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>266</x>
+     <y>25</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>69</x>
+     <y>379</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

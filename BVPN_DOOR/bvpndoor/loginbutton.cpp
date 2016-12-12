@@ -13,8 +13,8 @@ CLoginButton::CLoginButton(QWidget* parent)
 // slots
 void CLoginButton::identified(QString s)
 {
-    qDebug(">> identified=%s", s);
-    m_UserName = s;
+    qDebug() << ">> slot identified:" << s;
+    m_strUserName = s;
 }
 
 // overridables
@@ -52,10 +52,10 @@ void CLoginButton::mouseReleaseEvent(QMouseEvent* e)
     if (m_bPressed && (e->button() == Qt::LeftButton))
     {
         qDebug(">> signal CLoginButton.click()");
-        Q_EMIT click(!m_UserName.isEmpty()); 
+        Q_EMIT click(m_strUserName.isEmpty()); 
 
 #ifdef _TESTING_
-        m_UserName.isEmpty() ? m_UserName = "User McName" : m_UserName.clear(); OnEnter();
+        m_strUserName.isEmpty() ? m_strUserName = "User McName" : m_strUserName.clear(); OnEnter();
 #endif
 
         m_bPressed = false;
@@ -67,7 +67,7 @@ void CLoginButton::mouseReleaseEvent(QMouseEvent* e)
 // helper methods
 void CLoginButton::OnEnter() Q_DECL_NOEXCEPT
 {
-    if (m_UserName.isEmpty())
+    if (m_strUserName.isEmpty())
     {
         setPixmap(QPixmap(QString(":/CBlinkVPN/Resources/Assets/Login_hover.png")));
         UpdateLoginText(m_clrHovr.name());
@@ -80,7 +80,7 @@ void CLoginButton::OnEnter() Q_DECL_NOEXCEPT
 }
 void CLoginButton::OnLeave() Q_DECL_NOEXCEPT
 {
-    if (m_UserName.isEmpty())
+    if (m_strUserName.isEmpty())
     {
         setPixmap(QPixmap(QString(":/CBlinkVPN/Resources/Assets/Login_normal.png")));
         UpdateLoginText(m_clrNorm.name());
@@ -101,11 +101,11 @@ void CLoginButton::UpdateLoginText(const QString& c) Q_DECL_NOEXCEPT
 void CLoginButton::UpdateLogoutText(const QString& c) Q_DECL_NOEXCEPT
 {
     QLabel* label = parent()->findChild<QLabel*>(QString("loginLabel"));
-    label->setText(QString("<html><head/><body><p><span style=\"color:%1;\">%3 %2</span></p></body></html>").arg(c, m_UserName, tr("Logged as")));
+    label->setText(QString("<html><head/><body><p><span style=\"color:%1;\">%3 %2</span></p></body></html>").arg(c, m_strUserName, tr("Logged as")));
 }
 
 void CLoginButton::UpdateLogoutText(const QString& c, const QString& u) Q_DECL_NOEXCEPT
 {
     QLabel* label = parent()->findChild<QLabel*>(QString("loginLabel"));
-    label->setText(QString("<html><head/><body><p><span style=\"color:%1;\">%4 </span><span style=\"color:%2;\">%3</span></p></body></html>").arg(c, u, m_UserName, tr("Logged as")));
+    label->setText(QString("<html><head/><body><p><span style=\"color:%1;\">%4 </span><span style=\"color:%2;\">%3</span></p></body></html>").arg(c, u, m_strUserName, tr("Logged as")));
 }

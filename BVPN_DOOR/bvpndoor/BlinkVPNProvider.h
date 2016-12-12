@@ -1,43 +1,34 @@
 #pragma once
 
 //////////////////////////////////////////////////////////////////////////
-// dummy VPN Provider
+// dummy VPN Provider class is Presenter in MVP model
 
-class CBlinkVPNProvider
+class CBlinkVPNProvider : public QWidget
 {
-public:
-    CBlinkVPNProvider()
-        : m_bConnect(false)
-        , m_bLogin(false)
-    {
-    }
+    Q_OBJECT
 
+public:
+    CBlinkVPNProvider(QWidget* parent = Q_NULLPTR);
     ~CBlinkVPNProvider() Q_DECL_NOEXCEPT {}
 
+public Q_SLOTS:
+    void connectRequest(bool);
+    void loginRequest(bool);
+
+Q_SIGNALS:
+    void connectReply(bool);
+    void loginReply(QString);
+
+public:
     // dummy methods
-    bool Connect(bool b) Q_DECL_NOEXCEPT
+    bool Connect(bool b) Q_DECL_NOEXCEPT;
+    bool Login(const QString& s) Q_DECL_NOEXCEPT;
+    bool GetUserName(QString& s) Q_DECL_NOEXCEPT
     {
-        if (m_bConnect != b)
-        {
-            m_bConnect = b;
-            return true;
-        }
-        return false;
+        // @KLUDGE: should invoke Login Form to obtain the credentials..
+        s = "User McName";
+        return true;
     }
-
-    bool Login(const QString& s) Q_DECL_NOEXCEPT
-    {
-        // @KLUDGE: the algorithm does not depend on VPN connection state. IRL it should.
-        // anyways this is implementation dependent..
-        bool b = s.isEmpty();
-        if (m_bLogin != b)
-        {
-            m_bLogin = b;
-            return true;
-        }
-        return false;
-    }
-
 
 private:
     bool m_bConnect;

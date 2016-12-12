@@ -14,7 +14,7 @@ CConnectButton::CConnectButton(QWidget* parent)
 // slots
 void CConnectButton::connected(bool b)
 {
-    qDebug(">> connect=%i", b);
+    qDebug() << ">> slot connect:" << b;
     m_bConnect = b;
 
     OnConnect();
@@ -55,7 +55,7 @@ void CConnectButton::mouseReleaseEvent(QMouseEvent* e)
     if (m_bPressed && (e->button() == Qt::LeftButton))
     {
         qDebug(">> signal CConnectButton.click()");
-        Q_EMIT click(m_bConnect);
+        Q_EMIT click(!m_bConnect);
 
 #ifdef _TESTING_
         m_bConnect = !m_bConnect; OnConnect();

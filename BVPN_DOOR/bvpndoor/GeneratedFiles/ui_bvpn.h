@@ -17,6 +17,7 @@
 #include <QtWidgets/QHeaderView>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QWidget>
+#include "BlinkVPNProvider.h"
 #include "connectbutton.h"
 #include "loginbutton.h"
 
@@ -31,6 +32,7 @@ public:
     QLabel *connectFlag;
     QLabel *connectImage;
     CConnectButton *connectButton;
+    CBlinkVPNProvider *provider;
 
     void setupUi(QWidget *BlinkVPNClass)
     {
@@ -48,8 +50,7 @@ public:
         QIcon icon;
         icon.addFile(QStringLiteral("Resources/qticon.ico"), QSize(), QIcon::Normal, QIcon::Off);
         BlinkVPNClass->setWindowIcon(icon);
-        BlinkVPNClass->setStyleSheet(QLatin1String("CBlinkVPN{ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgb(56, 66, 90), stop:1 rgb(58, 68, 92)); }\n"
-""));
+        BlinkVPNClass->setStyleSheet(QStringLiteral("CBlinkVPN{ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgb(56, 66, 90), stop:1 rgb(58, 68, 92)); }"));
         BlinkVPNClass->setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
         loginLabel = new QLabel(BlinkVPNClass);
         loginLabel->setObjectName(QStringLiteral("loginLabel"));
@@ -112,9 +113,17 @@ public:
         connectButton->setFocusPolicy(Qt::TabFocus);
         connectButton->setAlignment(Qt::AlignCenter);
         connectButton->setTextInteractionFlags(Qt::NoTextInteraction);
+        provider = new CBlinkVPNProvider(BlinkVPNClass);
+        provider->setObjectName(QStringLiteral("provider"));
+        provider->setGeometry(QRect(10, 370, 120, 20));
+        provider->setVisible(false);
         QWidget::setTabOrder(loginButton, connectImage);
 
         retranslateUi(BlinkVPNClass);
+        QObject::connect(provider, SIGNAL(connectReply(bool)), connectButton, SLOT(connected(bool)));
+        QObject::connect(provider, SIGNAL(loginReply(QString)), loginButton, SLOT(identified(QString)));
+        QObject::connect(connectButton, SIGNAL(click(bool)), provider, SLOT(connectRequest(bool)));
+        QObject::connect(loginButton, SIGNAL(click(bool)), provider, SLOT(loginRequest(bool)));
 
         QMetaObject::connectSlotsByName(BlinkVPNClass);
     } // setupUi

@@ -25,5 +25,5 @@ Q_IMPORT_PLUGIN(QICOPlugin)
 
 // tweaks
 #ifdef _DEBUG
-#define _TESTING_
+//#define _TESTING_
 #endif

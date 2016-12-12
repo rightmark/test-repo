@@ -34,11 +34,11 @@ private:
     void UpdateLogoutText(const QString&, const QString&) Q_DECL_NOEXCEPT;
 
 private:
-    bool m_bPressed;    // mouse button pressed
+    bool m_bPressed;        // mouse button pressed
 
-    QString m_UserName; // user credentials to log in
+    QString m_strUserName;  // user credentials to log in
     // buddy label colors
-    QColor m_clrNorm;   // normal color
-    QColor m_clrHovr;   // hover color
-    QColor m_clrUser;   // user name span color
+    QColor m_clrNorm;       // normal color
+    QColor m_clrHovr;       // hover color
+    QColor m_clrUser;       // user name span color
 };
