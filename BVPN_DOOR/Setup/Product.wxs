@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <?include Include.wxi?>
+  <Product Id="*" Name="$(var.AppName)" Language="1033" Version="!(bind.FileVersion.bvpndoor)" Manufacturer="RightMark" UpgradeCode="{ABA12E8C-6D87-4F4F-A68C-03DD24B0DB4F}">
+    <Package InstallerVersion="301" Compressed="yes" InstallScope="perMachine" Platform="x86" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <Media Id="1" Cabinet="bvpndoor.cab" EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="qticon" SourceFile="$(var.ResrceDir)\qticon.ico" />
+
+    <!-- Step 1: Define the directory structure -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="DesktopFolder" SourceName="Desktop" />
+      <Directory Id="ProgramFilesFolder" SourceName="ProgramFiles">
+        <Directory Id="RIGHTMARK" Name="RightMark">
+          <Directory Id="APPLICATIONFOLDER" Name="$(var.AppFile)" />
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder" SourceName="Programs">
+        <Directory Id="ApplicationProgramsFolder" Name="$(var.AppName)" />
+      </Directory>
+      <Directory Id="FontsFolder" Name="FontsFolder">
+        <Component Id="font.ttf" Guid="{3014B63D-431E-48D4-B969-DADCBB67DA08}">
+          <File Id="fontbold" Name="fontbold.ttf" Source="$(var.ResrceDir)\Fonts\Roboto_700.ttf" TrueType="yes" />
+          <File Id="fontnorm" Name="fontnorm.ttf" Source="$(var.ResrceDir)\Fonts\Roboto_regular.ttf" TrueType="yes" KeyPath="yes" />
+        </Component>
+      </Directory>
+    </Directory>
+
+
+    <!-- Step 2: Add files to your installer package -->
+    <DirectoryRef Id="APPLICATIONFOLDER">
+      <Component Id="bvpndoor.exe" Guid="{72A539B0-45DE-4196-8E36-BCE86C6EA132}" Win64="no" >
+        <File Id="bvpndoor" Name="bvpndoor.exe" Source="$(var.SourceDir)\bvpndoor.exe" Vital="yes" KeyPath="yes" />
+      </Component>
+      <Component Id="bvpndoor.src" Guid="{894589EB-5B9D-4CA4-8CCD-3D4BDF7CDC4C}">
+        <File Id="bvpn_src" Name="bvpndoor.src" Source="$(var.SourceDir)\Src.zip" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- Step 3: Add the shortcut to your installer package -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="bvpn.appmenu" Guid="{4DD9F1AF-DF07-4ECC-8FAE-4272B2EEDE42}">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="$(var.AppNameFull)"
+                  Description="RightMark Processor Power Management Control Panel"
+                  Target="[APPLICATIONFOLDER]bvpndoor.exe"
+                  WorkingDirectory="APPLICATIONFOLDER" />
+        <Shortcut Id="UninstallProduct"
+                  Name="Uninstall PPM Panel"
+                  Description="Uninstall RightMark Processor Power Management Control Panel"
+                  Target="[SystemFolder]msiexec.exe"
+                  Arguments="/x [ProductCode]" />
+        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+        <!-- testing..
+        <RegistryValue Root="HKCU" Key="$(var.AppRegistry)" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+        -->
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="bvpn.desktop" Guid="{52A763EC-8AE8-40EF-AE01-29FB4585A4E1}">
+        <Shortcut Id="ApplicationDesktopShortcut"
+                  Name="$(var.AppName)"
+                  Description="Launch BlinkVPN test"
+                  Target="[APPLICATIONFOLDER]bvpndoor.exe"
+                  WorkingDirectory="APPLICATIONFOLDER" />
+        <CreateFolder />
+      </Component>
+    </DirectoryRef>
+
+    <Property Id="ApplicationFolderName" Value="RightMark\$(var.AppFile)" />
+    <Property Id="WixAppFolder" Value="WixPerMachineFolder" />
+
+    <!-- suppress the install scope dialog -->
+    <WixVariable Id="WixUISupportPerUser" Value="0" />
+
+    <WixVariable Id="WixUILicenseRtf" Value="include\LICENSE.rtf" />
+    <WixVariable Id="WixUIBannerBmp"  Value="include\Banner.jpg" />
+    <WixVariable Id="WixUIDialogBmp"  Value="include\Dialog.jpg" />
+
+    <!-- Step 4: Tell WiX to install the files -->
+    <Feature Id="Feature1" Title="$(var.AppNameFull)" Absent="disallow" AllowAdvertise="no" Level="1">
+      <ComponentRef Id="bvpndoor.exe" />
+      <ComponentRef Id="bvpn.appmenu" />
+      <ComponentRef Id="bvpn.desktop" />
+    </Feature>
+    <Feature Id="Feature2" Title="Source code" AllowAdvertise="no" Level="1">
+      <ComponentRef Id="bvpndoor.src" />
+    </Feature>
+    <Feature Id="Feature3" Title="Roboto font" AllowAdvertise="no" Level="1">
+      <ComponentRef Id="font.ttf" />
+    </Feature>
+
+    <!-- Step 5: Add UI to your installer. Trigger the custom action -->
+    <UI Id="UISequence">
+      <Property Id="ARPPRODUCTICON" Value="qticon" />
+
+      <UIRef Id="WixUI_Advanced" />
+    </UI>
+
+    <!-- Step 6: Include the custom actions -->
+
+  </Product>
+</Wix>

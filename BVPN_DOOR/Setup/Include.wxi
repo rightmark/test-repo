@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include Id="BvpnInclude">
+
+  <!-- Platform specifics -->
+  
+  <?define SourceDir = "..\Win32\$(var.Configuration)" ?>
+  <?define ResrceDir = "..\bvpndoor\Resources" ?>
+
+  <!-- App specifics -->
+
+  <?define AppFile = "bvpndoor" ?>
+  <?define AppName = "BlinkVPN test" ?>
+  <?define AppNameFull = "BlinkVPN test - Qt Application" ?>
+
+</Include>
