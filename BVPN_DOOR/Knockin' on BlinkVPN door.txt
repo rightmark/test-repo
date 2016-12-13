@@ -1,37 +1,49 @@
 README
--------
+------
 
+QT APPLICATION : BVPN_DOOR Project Overview
+-------------------------------------------
 
-========================================================================
-    QT APPLICATION : BVPN_DOOR Project Overview
-========================================================================
+The task:
+Use QT framework to create one simple Window for a VPN application.
+What is needed is only to create the main screen.
+"Connect" button should be clickable with a hover effect. 
+On click button should change state to "Disconnect" and again once clicked back to "Connect"
+All assets along with PSD and font needed for labels are provided.
 
-
-The task description can be found in Task.h file
 
 Tech note:
-Server is IP-agnostic (ipv4 and ipv6 both are used) and based on an asynchronous event-driven scheme (like nginx uses).
-Dedicated instanses work with UDP and TCP protocols.
-Each supported service saves its state into binary format file every N seconds.
-There is a heartbeat server that monitors worker server activity, terminates suspended process,
-and respawn another one. Saved state is loaded by respawned process.
-The whole archicture based on classes specialization (high cohesion) and low coupling principles.
+The project created with Visual Studio Qt add-in wizard and further Qt Designer was used as a primary tool for development.
+Some manual coding was used as well.
+The final executable was built against Qt 5.7.0 static library and tested under Windows 8.1 and Vista.
+The whole architecture is based on classes specialization, low coupling principles, and Model-View-Presenter model.
+Some mockup VNP Provider object is used to support MVP model. All signal-slot connections were built with Qt Designer.
 Though, this is just a working prototype solving the only task (see above).
+There are some issues on Roboto font supplied.
+"Connect" button uses Roboto 11px that is a bit higher than the supplied Preview image displays. (PSD uses Roboto bold, 14px though).
+Same for "Login" label font. Roboto bold, 9px bold is used and looks like displayed on the Preview.
+"Connect" button text is horizontally centered according to Windows GUI rules.
+Swedish flag located as Qt resource. This is a subject to discuss with Project Architector, though. As some other things.
+The project is provided as MSI file just to install the Roboto font that is not standard for Windows.
+
 
 Tools used:
-Visual Studio 2015 + GitHub extension (installed from Gallery)
+Visual Studio 2015 (Update 2), SDK 10.0.14393.0,
+Qt 5.7.0 framework library
+Qt Visual Studio Tools 2.0.0
+GitHub extension (installed from Gallery)
+WIX Toolset 3.10.3.3007
 The only target platform is Microsoft Windows x86.
 
 Note on coding style:
-Actually there is no any defined coding style. 
-The code looks a bit eclectic because of C++11/14 syntax and library classes are mixed with Win API.
-C++11 nullptr is not used because of NULL-based Win API dominance.
-This example demonstrates the various techniques including meta-programming + interfaces + ATL.
+Actually there is no any predefined coding style.
+The Qt native syntax and objects are used as much as possible.
+So, Qt Q_NULLPTR and Q_DECL_NOEXCEPT are used instead of C++11 nullptr and noexcept.
 Preprocessor and conditional compilation are used as well.
 
 Note: current version was built against SDK 10.0.14393.0 (Windows 10).
-if you get the error <Cannot open include file: 'corecrt.h'>
-please correct the actual SDK version installed in Project settings (General->Target Platform Version).
+If you get the error <Cannot open include file: 'corecrt.h'>
+Please correct the actual SDK version installed in Project settings (General->Target Platform Version).
 
 rightmark.development@gmail
 

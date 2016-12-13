@@ -28,15 +28,10 @@
       <Extensions>moc;h;cpp</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
-    <Filter Include="Generated Files\Debug">
-      <UniqueIdentifier>{9d93b391-52dc-4a22-967e-bd23da538b91}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
     <Filter Include="Generated Files\Release">
-      <UniqueIdentifier>{56989068-f453-42e0-994e-2e379ace3721}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
+      <UniqueIdentifier>{be3ad79e-2fd9-4fb9-b5c9-65517c13b202}</UniqueIdentifier>
       <SourceControlFiles>False</SourceControlFiles>
+      <Extensions>cpp;moc</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -49,23 +44,29 @@
     <ClCompile Include="bvpn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_bvpn.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_bvpn.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratedFiles\qrc_bvpn.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_connectbutton.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_connectbutton.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="connectbutton.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BlinkVPNProvider.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="loginbutton.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release-static\moc_BlinkVPNProvider.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release-static\moc_bvpn.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release-static\moc_connectbutton.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release-static\moc_loginbutton.cpp">
+      <Filter>Generated Files\Release</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -90,6 +91,12 @@
       <Filter>Resource Files</Filter>
     </CustomBuild>
     <CustomBuild Include="connectbutton.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="BlinkVPNProvider.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="loginbutton.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>

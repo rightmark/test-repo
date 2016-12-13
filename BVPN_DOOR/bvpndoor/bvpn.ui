@@ -35,8 +35,8 @@
    <string>BlinkVPN - test</string>
   </property>
   <property name="windowIcon">
-   <iconset>
-    <normaloff>Resources/qticon.ico</normaloff>Resources/qticon.ico</iconset>
+   <iconset resource="bvpn.qrc">
+    <normaloff>:/CBlinkVPN/Resources/qticon.ico</normaloff>:/CBlinkVPN/Resources/qticon.ico</iconset>
   </property>
   <property name="styleSheet">
    <string notr="true">CBlinkVPN{ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgb(56, 66, 90), stop:1 rgb(58, 68, 92)); }</string>

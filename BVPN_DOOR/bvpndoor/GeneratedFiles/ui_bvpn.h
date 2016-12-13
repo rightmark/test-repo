@@ -48,7 +48,7 @@ public:
         BlinkVPNClass->setMinimumSize(QSize(296, 400));
         BlinkVPNClass->setMaximumSize(QSize(296, 400));
         QIcon icon;
-        icon.addFile(QStringLiteral("Resources/qticon.ico"), QSize(), QIcon::Normal, QIcon::Off);
+        icon.addFile(QStringLiteral(":/CBlinkVPN/Resources/qticon.ico"), QSize(), QIcon::Normal, QIcon::Off);
         BlinkVPNClass->setWindowIcon(icon);
         BlinkVPNClass->setStyleSheet(QStringLiteral("CBlinkVPN{ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgb(56, 66, 90), stop:1 rgb(58, 68, 92)); }"));
         BlinkVPNClass->setLocale(QLocale(QLocale::English, QLocale::UnitedStates));

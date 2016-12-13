@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="CBlinkVPN">
+    <file>Resources/qticon.ico</file>
     <file>Resources/Assets/SWE_flag.png</file>
     <file>Resources/Assets/Quickconnect_btn.png</file>
     <file>Resources/Assets/Quickconnect_btn_hover.png</file>
