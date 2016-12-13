@@ -20,7 +20,7 @@
         <Directory Id="ApplicationProgramsFolder" Name="$(var.AppName)" />
       </Directory>
       <Directory Id="FontsFolder" Name="FontsFolder">
-        <Component Id="font.ttf" Guid="{3014B63D-431E-48D4-B969-DADCBB67DA08}">
+        <Component Id="font.ttf" Guid="{3014B63D-431E-48D4-B969-DADCBB67DA08}" Permanent="yes" >
           <File Id="fontbold" Name="fontbold.ttf" Source="$(var.ResrceDir)\Fonts\Roboto_700.ttf" TrueType="yes" />
           <File Id="fontnorm" Name="fontnorm.ttf" Source="$(var.ResrceDir)\Fonts\Roboto_regular.ttf" TrueType="yes" KeyPath="yes" />
         </Component>
@@ -34,7 +34,7 @@
         <File Id="bvpndoor" Name="bvpndoor.exe" Source="$(var.SourceDir)\bvpndoor.exe" Vital="yes" KeyPath="yes" />
       </Component>
       <Component Id="bvpndoor.src" Guid="{894589EB-5B9D-4CA4-8CCD-3D4BDF7CDC4C}">
-        <File Id="bvpn_src" Name="bvpndoor.src" Source="$(var.SourceDir)\Src.zip" KeyPath="yes" />
+        <File Id="bvpn_src" Name="Src.zip" Source="$(var.SourceDir)\BVPN_DOOR.zip" KeyPath="yes" />
       </Component>
     </DirectoryRef>
 
@@ -42,13 +42,13 @@
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="bvpn.appmenu" Guid="{4DD9F1AF-DF07-4ECC-8FAE-4272B2EEDE42}">
         <Shortcut Id="ApplicationStartMenuShortcut"
-                  Name="$(var.AppNameFull)"
-                  Description="RightMark Processor Power Management Control Panel"
+                  Name="$(var.AppName)"
+                  Description="$(var.AppNameFull)"
                   Target="[APPLICATIONFOLDER]bvpndoor.exe"
                   WorkingDirectory="APPLICATIONFOLDER" />
         <Shortcut Id="UninstallProduct"
-                  Name="Uninstall PPM Panel"
-                  Description="Uninstall RightMark Processor Power Management Control Panel"
+                  Name="Uninstall $(var.AppName)"
+                  Description="Uninstall $(var.AppNameFull)"
                   Target="[SystemFolder]msiexec.exe"
                   Arguments="/x [ProductCode]" />
         <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
@@ -62,7 +62,7 @@
       <Component Id="bvpn.desktop" Guid="{52A763EC-8AE8-40EF-AE01-29FB4585A4E1}">
         <Shortcut Id="ApplicationDesktopShortcut"
                   Name="$(var.AppName)"
-                  Description="Launch BlinkVPN test"
+                  Description="Launch $(var.AppNameFull)"
                   Target="[APPLICATIONFOLDER]bvpndoor.exe"
                   WorkingDirectory="APPLICATIONFOLDER" />
         <CreateFolder />
