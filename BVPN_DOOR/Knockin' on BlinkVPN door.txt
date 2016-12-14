@@ -13,7 +13,7 @@ All assets along with PSD and font needed for labels are provided.
 
 
 Tech note:
-The project created with Visual Studio Qt add-in wizard and further Qt Designer was used as a primary tool for development.
+The project was created with Visual Studio Qt add-in wizard and further Qt Designer was used as a primary tool for development.
 Some manual coding was used as well.
 The final executable was built against Qt 5.7.0 static library and tested under Windows 8.1 and Vista.
 The whole architecture is based on classes specialization, low coupling principles, and Model-View-Presenter model.
@@ -23,7 +23,7 @@ There are some issues on Roboto font supplied.
 "Connect" button uses Roboto 11px that is a bit higher than the supplied Preview image displays. (PSD uses Roboto bold, 14px though).
 Same for "Login" label font. Roboto bold, 9px bold is used and looks like displayed on the Preview.
 "Connect" button text is horizontally centered according to Windows GUI rules.
-Swedish flag located as Qt resource. This is a subject to discuss with Project Architector, though. As some other things.
+Swedish flag located as Qt resource. This is a subject to discuss with the Project Architect, though. As some other things.
 The project is provided as MSI file just to install the Roboto font that is not standard for Windows.
 
 

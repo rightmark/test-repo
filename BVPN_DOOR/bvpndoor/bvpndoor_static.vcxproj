@@ -48,6 +48,7 @@
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(QTDIR)\plugins;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalDependencies>Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;qtmain.lib;qtharfbuzzng.lib;qtfreetype.lib;qtpcre.lib;Ws2_32.lib;winmm.lib;imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <DelayLoadDLLs>imm32.dll;winmm.dll;Ws2_32.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
