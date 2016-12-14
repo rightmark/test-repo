@@ -15,7 +15,7 @@ All assets along with PSD and font needed for labels are provided.
 Tech note:
 The project was created with Visual Studio Qt add-in wizard and further Qt Designer was used as a primary tool for development.
 Some manual coding was used as well.
-The final executable was built against Qt 5.7.0 static library and tested under Windows 8.1 and Vista.
+The final executable was built against Qt 5.7.1 static library and tested under Windows 8.1 and Vista.
 The whole architecture is based on classes specialization, low coupling principles, and Model-View-Presenter model.
 Some mockup VNP Provider object is used to support MVP model. All signal-slot connections were built with Qt Designer.
 Though, this is just a working prototype solving the only task (see above).
@@ -29,7 +29,7 @@ The project is provided as MSI file just to install the Roboto font that is not 
 
 Tools used:
 Visual Studio 2015 (Update 2), SDK 10.0.14393.0,
-Qt 5.7.0 framework library
+Qt 5.7.1 framework library
 Qt Visual Studio Tools 2.0.0
 GitHub extension (installed from Gallery)
 WIX Toolset 3.10.3.3007
