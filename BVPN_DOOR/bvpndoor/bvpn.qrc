@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="CBlinkVPN">
+    <file alias="Roboto Bold">Resources/Fonts/Roboto_700.ttf</file>
+    <file alias="Roboto">Resources/Fonts/Roboto_regular.ttf</file>
     <file>Resources/qticon.ico</file>
     <file>Resources/Assets/SWE_flag.png</file>
     <file>Resources/Assets/Quickconnect_btn.png</file>

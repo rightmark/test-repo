@@ -39,7 +39,7 @@
     <normaloff>:/CBlinkVPN/Resources/qticon.ico</normaloff>:/CBlinkVPN/Resources/qticon.ico</iconset>
   </property>
   <property name="styleSheet">
-   <string notr="true">CBlinkVPN{ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgb(56, 66, 90), stop:1 rgb(58, 68, 92)); }</string>
+   <string notr="true">CBlinkVPN{ background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 #38425a, stop:1 #3a445c) }</string>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
@@ -58,14 +58,6 @@
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
-   </property>
-   <property name="font">
-    <font>
-     <family>Roboto</family>
-     <pointsize>9</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
    </property>
    <property name="text">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#667391;&quot;&gt;Login&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -206,14 +198,6 @@
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
-   </property>
-   <property name="font">
-    <font>
-     <family>Roboto</family>
-     <pointsize>11</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
    </property>
    <property name="cursor">
     <cursorShape>PointingHandCursor</cursorShape>
