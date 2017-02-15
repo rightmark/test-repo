@@ -11,13 +11,73 @@ CBlinkVPN::CBlinkVPN(QWidget* parent)
 
 }
 
+// dummy methods
+bool CBlinkVPN::Connect(bool b) Q_DECL_NOEXCEPT
+{
+    if (m_bConnect != b)
+    {
+        m_bConnect = b;
+        return true;
+    }
+    return false;
+}
+
+bool CBlinkVPN::Login(const QString& s) Q_DECL_NOEXCEPT
+{
+    // @KLUDGE: the algorithm does not depend on VPN connection state. IRL it should.
+    // anyways this is implementation dependent..
+    bool b = !s.isEmpty();
+    if (m_bLogin != b)
+    {
+        m_bLogin = b;
+        return true;
+    }
+    return false;
+}
+
+bool CBlinkVPN::GetUserName(QString& s) Q_DECL_NOEXCEPT
+{
+    // @KLUDGE: should invoke Login Form to obtain the credentials..
+    s = "User McName";
+    return true;
+}
+
+void CBlinkVPN::connectRequest(bool bConnect)
+{
+    if (Connect(bConnect))
+    {
+        qDebug(">> signal CBlinkVPN.connectReply()");
+        Q_EMIT connectReply(bConnect); // signal on successful connect/disconnect..
+    }
+}
+
+void CBlinkVPN::loginRequest(bool bLogin)
+{
+    QString s;
+    bool bRet = true;
+    if (bLogin) { bRet = GetUserName(s); }
+
+    if (bRet && Login(s))
+    {
+        qDebug(">> signal CBlinkVPN.loginReply()");
+        Q_EMIT loginReply(s);
+    }
+}
+
+// overridables
+void CBlinkVPN::closeEvent(QCloseEvent* e)
+{
+    // @TODO: close provider here..
+
+    QWidget::closeEvent(e);
+}
+
+// helper methods
 bool CBlinkVPN::setupFonts(void) Q_DECL_NOEXCEPT
 {
-    int id(0);
-
-    id = getEmbeddedFontId("Roboto Bold");
-    setupEmbeddedFont("loginLabel", id, 9);
-    setupEmbeddedFont("connectButton", id, 11);
+    int id = getEmbeddedFontId("Roboto Bold");
+    setupEmbeddedFont("loginLabel", id, 9, true);
+    setupEmbeddedFont("connectButton", id, 11, true);
 
     return true;
 }
@@ -37,10 +97,15 @@ bool CBlinkVPN::setupEmbeddedFont(const QString& wname, int id, int fsize, bool 
         font.setFamily(QFontDatabase::applicationFontFamilies(id).at(0));
         font.setPointSize(fsize);
         font.setStyleStrategy(QFont::PreferAntialias);
-        font.setBold(bold);
+        if (bold)
+        {
+            font.setBold(bold);
+            font.setWeight(75);
+        }
 
         w->setFont(font);
         return true;
     }
     return false;
 }
+

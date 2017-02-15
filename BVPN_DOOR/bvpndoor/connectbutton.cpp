@@ -5,8 +5,8 @@
 CConnectButton::CConnectButton(QWidget* parent)
     : QLabel(parent)
     , m_bConnect(false)
-    , m_clrConnect(233, 242, 250)
-    , m_clrDisconnect(247, 247, 247)
+    , m_clrConnect("#e9f2fa")
+    , m_clrDisconnect("#f7f7f7")
 {
 }
 

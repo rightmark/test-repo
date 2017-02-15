@@ -19,12 +19,6 @@
       <Directory Id="ProgramMenuFolder" SourceName="Programs">
         <Directory Id="ApplicationProgramsFolder" Name="$(var.AppName)" />
       </Directory>
-      <Directory Id="FontsFolder" Name="FontsFolder">
-        <Component Id="font.ttf" Guid="{3014B63D-431E-48D4-B969-DADCBB67DA08}" Permanent="yes" >
-          <File Id="fontbold" Name="fontbold.ttf" Source="$(var.ResrceDir)\Fonts\Roboto_700.ttf" TrueType="yes" />
-          <File Id="fontnorm" Name="fontnorm.ttf" Source="$(var.ResrceDir)\Fonts\Roboto_regular.ttf" TrueType="yes" KeyPath="yes" />
-        </Component>
-      </Directory>
     </Directory>
 
 
@@ -87,9 +81,6 @@
     </Feature>
     <Feature Id="Feature2" Title="Source code" AllowAdvertise="no" Level="1">
       <ComponentRef Id="bvpndoor.src" />
-    </Feature>
-    <Feature Id="Feature3" Title="Roboto font" AllowAdvertise="no" Level="1">
-      <ComponentRef Id="font.ttf" />
     </Feature>
 
     <!-- Step 5: Add UI to your installer. Trigger the custom action -->

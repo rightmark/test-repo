@@ -81,9 +81,6 @@
    <property name="cursor">
     <cursorShape>PointingHandCursor</cursorShape>
    </property>
-   <property name="mouseTracking">
-    <bool>true</bool>
-   </property>
    <property name="focusPolicy">
     <enum>Qt::TabFocus</enum>
    </property>
@@ -221,19 +218,6 @@
     <cstring>connectImage</cstring>
    </property>
   </widget>
-  <widget class="CBlinkVPNProvider" name="provider" native="true">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>370</y>
-     <width>120</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-  </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
@@ -255,18 +239,6 @@
     <slot>identified(QString)</slot>
    </slots>
   </customwidget>
-  <customwidget>
-   <class>CBlinkVPNProvider</class>
-   <extends>QWidget</extends>
-   <header>BlinkVPNProvider.h</header>
-   <container>1</container>
-   <slots>
-    <signal>connectReply(bool)</signal>
-    <signal>loginReply(QString)</signal>
-    <slot>connectRequest(bool)</slot>
-    <slot>loginRequest(bool)</slot>
-   </slots>
-  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>loginButton</tabstop>
@@ -277,14 +249,14 @@
  </resources>
  <connections>
   <connection>
-   <sender>provider</sender>
+   <sender>BlinkVPNClass</sender>
    <signal>connectReply(bool)</signal>
    <receiver>connectButton</receiver>
    <slot>connected(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>69</x>
-     <y>379</y>
+     <x>147</x>
+     <y>199</y>
     </hint>
     <hint type="destinationlabel">
      <x>147</x>
@@ -293,14 +265,14 @@
    </hints>
   </connection>
   <connection>
-   <sender>provider</sender>
+   <sender>BlinkVPNClass</sender>
    <signal>loginReply(QString)</signal>
    <receiver>loginButton</receiver>
    <slot>identified(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>69</x>
-     <y>379</y>
+     <x>147</x>
+     <y>199</y>
     </hint>
     <hint type="destinationlabel">
      <x>266</x>
@@ -311,7 +283,7 @@
   <connection>
    <sender>connectButton</sender>
    <signal>click(bool)</signal>
-   <receiver>provider</receiver>
+   <receiver>BlinkVPNClass</receiver>
    <slot>connectRequest(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -319,15 +291,15 @@
      <y>335</y>
     </hint>
     <hint type="destinationlabel">
-     <x>69</x>
-     <y>379</y>
+     <x>147</x>
+     <y>199</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>loginButton</sender>
    <signal>click(bool)</signal>
-   <receiver>provider</receiver>
+   <receiver>BlinkVPNClass</receiver>
    <slot>loginRequest(bool)</slot>
    <hints>
     <hint type="sourcelabel">
@@ -335,10 +307,16 @@
      <y>25</y>
     </hint>
     <hint type="destinationlabel">
-     <x>69</x>
-     <y>379</y>
+     <x>147</x>
+     <y>199</y>
     </hint>
    </hints>
   </connection>
  </connections>
+ <slots>
+  <signal>connectReply(bool)</signal>
+  <signal>loginReply(QString)</signal>
+  <slot>connectRequest(bool)</slot>
+  <slot>loginRequest(bool)</slot>
+ </slots>
 </ui>
