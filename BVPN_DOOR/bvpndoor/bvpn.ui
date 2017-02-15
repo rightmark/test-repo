@@ -99,6 +99,9 @@
    <property name="margin">
     <number>0</number>
    </property>
+   <property name="buddy">
+    <cstring>loginLabel</cstring>
+   </property>
   </widget>
   <widget class="QLabel" name="logoImage">
    <property name="geometry">
@@ -213,6 +216,9 @@
    </property>
    <property name="textInteractionFlags">
     <set>Qt::NoTextInteraction</set>
+   </property>
+   <property name="buddy">
+    <cstring>connectImage</cstring>
    </property>
   </widget>
   <widget class="CBlinkVPNProvider" name="provider" native="true">

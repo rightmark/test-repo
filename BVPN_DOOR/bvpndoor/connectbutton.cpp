@@ -5,7 +5,6 @@
 CConnectButton::CConnectButton(QWidget* parent)
     : QLabel(parent)
     , m_bConnect(false)
-    , m_bPressed(false)
     , m_clrConnect(233, 242, 250)
     , m_clrDisconnect(247, 247, 247)
 {
@@ -36,23 +35,10 @@ void CConnectButton::leaveEvent(QEvent* e)
 
     QLabel::leaveEvent(e);
 }
-void CConnectButton::mouseMoveEvent(QMouseEvent* e)
-{
-    m_bPressed = false;
-
-    QLabel::mouseMoveEvent(e);
-}
-void CConnectButton::mousePressEvent(QMouseEvent* e)
-{
-    qDebug(">> CConnectButton.mousePressEvent");
-    if (e->button() == Qt::LeftButton) { m_bPressed = true; }
-
-    QLabel::mousePressEvent(e);
-}
 void CConnectButton::mouseReleaseEvent(QMouseEvent* e)
 {
     qDebug(">> CConnectButton.mouseReleaseEvent");
-    if (m_bPressed && (e->button() == Qt::LeftButton))
+    if ((e->button() == Qt::LeftButton) && rect().contains(e->pos()) )
     {
         qDebug(">> signal CConnectButton.click()");
         Q_EMIT click(!m_bConnect);
@@ -60,8 +46,6 @@ void CConnectButton::mouseReleaseEvent(QMouseEvent* e)
 #ifdef _TESTING_
         m_bConnect = !m_bConnect; OnConnect();
 #endif
-
-        m_bPressed = false;
     }
     QLabel::mouseReleaseEvent(e);
 }
@@ -70,39 +54,31 @@ void CConnectButton::mouseReleaseEvent(QMouseEvent* e)
 // helper methods
 void CConnectButton::OnConnect() Q_DECL_NOEXCEPT
 {
-    m_bConnect ? UpdateLabelText(m_clrDisconnect.name(), tr("DISCONNECT"))
-               : UpdateLabelText(m_clrConnect.name(), tr("QUICK CONNECT"));
+    m_bConnect ? updateLabelText(m_clrDisconnect.name(), tr("DISCONNECT"))
+               : updateLabelText(m_clrConnect.name(), tr("QUICK CONNECT"));
 
     OnEnter(); // update hovered button image
 }
+
 void CConnectButton::OnEnter() Q_DECL_NOEXCEPT
 {
-    QLabel* label = parent()->findChild<QLabel*>(QString("connectImage"));
-
-    if (m_bConnect)
-    {
-        label->setPixmap(QPixmap(QString(":/CBlinkVPN/Resources/Assets/Disconnect_btn_hover.png")));
-    }
-    else
-    {
-        label->setPixmap(QPixmap(QString(":/CBlinkVPN/Resources/Assets/Quickconnect_btn_hover.png")));
-    }
+    m_bConnect ? updateLabelImage("Disconnect_btn_hover.png")
+               : updateLabelImage("Quickconnect_btn_hover.png");
 }
+
 void CConnectButton::OnLeave() Q_DECL_NOEXCEPT
 {
-    QLabel* label = parent()->findChild<QLabel*>(QString("connectImage"));
-
-    if (m_bConnect)
-    {
-        label->setPixmap(QPixmap(QString(":/CBlinkVPN/Resources/Assets/Disconnect_btn.png")));
-    }
-    else
-    {
-        label->setPixmap(QPixmap(QString(":/CBlinkVPN/Resources/Assets/Quickconnect_btn.png")));
-    }
+    m_bConnect ? updateLabelImage("Disconnect_btn.png")
+               : updateLabelImage("Quickconnect_btn.png");
 }
 
-void CConnectButton::UpdateLabelText(const QString& c, const QString& t) Q_DECL_NOEXCEPT
+void CConnectButton::updateLabelImage(const QString& s) Q_DECL_NOEXCEPT
+{
+    QLabel* l = static_cast<QLabel*>(buddy());
+    l->setPixmap(QPixmap(":/CBlinkVPN/Resources/Assets/" + s));
+}
+
+void CConnectButton::updateLabelText(const QString& c, const QString& t) Q_DECL_NOEXCEPT
 {
     setText(QString("<html><head/><body><p><span style=\"color:%1;\">%2</span></p></body></html>").arg(c, t));
 }

@@ -20,8 +20,6 @@ protected:
     // overridables
     void enterEvent(QEvent*);
     void leaveEvent(QEvent*);
-    void mouseMoveEvent(QMouseEvent*);
-    void mousePressEvent(QMouseEvent*);
     void mouseReleaseEvent(QMouseEvent*);
 
 private:
@@ -29,13 +27,12 @@ private:
     void OnEnter(void) Q_DECL_NOEXCEPT;
     void OnLeave(void) Q_DECL_NOEXCEPT;
 
-    void UpdateLoginText(const QString&) Q_DECL_NOEXCEPT;
-    void UpdateLogoutText(const QString&) Q_DECL_NOEXCEPT;
-    void UpdateLogoutText(const QString&, const QString&) Q_DECL_NOEXCEPT;
+    void updateLabelImage(const QString&) Q_DECL_NOEXCEPT;
+    void updateLoginText(const QString&) Q_DECL_NOEXCEPT;
+    void updateLogoutText(const QString&) Q_DECL_NOEXCEPT;
+    void updateLogoutText(const QString&, const QString&) Q_DECL_NOEXCEPT;
 
 private:
-    bool m_bPressed;        // mouse button pressed
-
     QString m_strUserName;  // user credentials to log in
     // buddy label colors
     QColor m_clrNorm;       // normal color
