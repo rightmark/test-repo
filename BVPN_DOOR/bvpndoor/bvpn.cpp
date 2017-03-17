@@ -76,8 +76,8 @@ void CBlinkVPN::closeEvent(QCloseEvent* e)
 bool CBlinkVPN::setupFonts(void) Q_DECL_NOEXCEPT
 {
     int id = getEmbeddedFontId("Roboto Bold");
-    setupEmbeddedFont("loginLabel", id, 9, true);
-    setupEmbeddedFont("connectButton", id, 11, true);
+    setupEmbeddedFont("loginLabel", id, 9);
+    setupEmbeddedFont("connectButton", id, 11);
 
     return true;
 }
@@ -87,24 +87,26 @@ long CBlinkVPN::getEmbeddedFontId(const QString& alias) Q_DECL_NOEXCEPT
     return QFontDatabase::addApplicationFont(":/CBlinkVPN/" + alias);
 }
 
-bool CBlinkVPN::setupEmbeddedFont(const QString& wname, int id, int fsize, bool bold) Q_DECL_NOEXCEPT
+bool CBlinkVPN::setupEmbeddedFont(const QString& wname, int id, int fsize, int space) Q_DECL_NOEXCEPT
 {
-    QWidget* w = findChild<QWidget*>(wname);
-    if (w && (id != -1))
+    if (id != -1)
     {
-        QFont font;
+        QWidget* w = findChild<QWidget*>(wname);
+        Q_ASSERT(w != Q_NULLPTR);
 
-        font.setFamily(QFontDatabase::applicationFontFamilies(id).at(0));
-        font.setPointSize(fsize);
-        font.setStyleStrategy(QFont::PreferAntialias);
-        if (bold)
+        if (w)
         {
-            font.setBold(bold);
-            font.setWeight(75);
-        }
+            QFont font;
 
-        w->setFont(font);
-        return true;
+            font.setFamily(QFontDatabase::applicationFontFamilies(id).at(0));
+            font.setPointSize(fsize);
+            font.setStyleStrategy(QFont::PreferAntialias);
+            font.setHintingPreference(QFont::PreferFullHinting);
+            font.setLetterSpacing(QFont::PercentageSpacing, space);
+
+            w->setFont(font);
+            return true;
+        }
     }
     return false;
 }

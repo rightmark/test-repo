@@ -75,6 +75,8 @@ void CConnectButton::OnLeave() Q_DECL_NOEXCEPT
 void CConnectButton::updateLabelImage(const QString& s) Q_DECL_NOEXCEPT
 {
     QLabel* l = static_cast<QLabel*>(buddy());
+    Q_ASSERT(l != Q_NULLPTR);
+
     l->setPixmap(QPixmap(":/CBlinkVPN/Resources/Assets/" + s));
 }
 

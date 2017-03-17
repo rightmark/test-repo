@@ -87,6 +87,8 @@ void CLoginButton::updateLabelImage(const QString& s) Q_DECL_NOEXCEPT
 void CLoginButton::updateLoginText(const QString& c) Q_DECL_NOEXCEPT
 {
     QLabel* l = static_cast<QLabel*>(buddy());
+    Q_ASSERT(l != Q_NULLPTR);
+
     QString s("<html><head/><body><p><span style=\"color:%1;\">%2</span></p></body></html>");
     l->setText(s.arg(c, tr("Login")));
 }
@@ -94,6 +96,8 @@ void CLoginButton::updateLoginText(const QString& c) Q_DECL_NOEXCEPT
 void CLoginButton::updateLogoutText(const QString& c) Q_DECL_NOEXCEPT
 {
     QLabel* l = static_cast<QLabel*>(buddy());
+    Q_ASSERT(l != Q_NULLPTR);
+
     QString s("<html><head/><body><p><span style=\"color:%1;\">%3 %2</span></p></body></html>");
     l->setText(s.arg(c, m_strUserName, tr("Logged as")));
 }
@@ -101,6 +105,8 @@ void CLoginButton::updateLogoutText(const QString& c) Q_DECL_NOEXCEPT
 void CLoginButton::updateLogoutText(const QString& c, const QString& u) Q_DECL_NOEXCEPT
 {
     QLabel* l = static_cast<QLabel*>(buddy());
+    Q_ASSERT(l != Q_NULLPTR);
+
     QString s("<html><head/><body><p><span style=\"color:%1;\">%4 </span><span style=\"color:%2;\">%3</span></p></body></html>");
     l->setText(s.arg(c, u, m_strUserName, tr("Logged as")));
 }

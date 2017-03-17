@@ -33,7 +33,7 @@ protected:
     // helper methods
     bool setupFonts(void) Q_DECL_NOEXCEPT;
     long getEmbeddedFontId(const QString&) Q_DECL_NOEXCEPT;
-    bool setupEmbeddedFont(const QString&, int, int, bool = false) Q_DECL_NOEXCEPT;
+    bool setupEmbeddedFont(const QString&, int, int, int = 100) Q_DECL_NOEXCEPT;
 
 private:
     bool m_bConnect;    // VPN connection is active
