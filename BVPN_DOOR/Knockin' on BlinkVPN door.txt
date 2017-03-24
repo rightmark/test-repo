@@ -16,8 +16,8 @@ Tech note:
 The project was created with Visual Studio Qt add-in wizard and further Qt Designer was used as a primary tool for development.
 Some manual coding was used as well.
 The final executable was built against Qt 5.7.1 static library and tested under Windows 8.1 and Vista.
-The whole architecture is based on classes specialization, low coupling principles, and Model-View-Presenter model.
-Some mockup VNP Provider object is used to support MVP model. All signal-slot connections were built with Qt Designer.
+The whole architecture is based on classes specialization, low coupling principles, and Model-View-Presenter design pattern.
+Some mockup VNP Provider object is used to support MVP scheme. All signal-slot connections were built with Qt Designer.
 Though, this is just a working prototype solving the only task (see above).
 There are some issues on Roboto font supplied.
 "Connect" button uses Roboto 11px that is a bit higher than the supplied Preview image displays. (PSD uses Roboto bold, 14px though).
@@ -29,9 +29,9 @@ The project is provided as MSI file just to install the Roboto font that is not 
 
 
 Tools used:
-Visual Studio 2015 (Update 2), SDK 10.0.14393.0,
+Visual Studio 2015 (Update 2),
 Qt 5.7.1 framework library
-Qt Visual Studio Tools 2.0.0
+Qt Visual Studio Tools 2.1.1
 GitHub extension (installed from Gallery)
 WIX Toolset 3.10.3.3007
 The only target platform is Microsoft Windows x86.
@@ -42,9 +42,6 @@ The Qt native syntax and objects are used as much as possible.
 So, Qt Q_NULLPTR and Q_DECL_NOEXCEPT are used instead of C++11 nullptr and noexcept.
 Preprocessor and conditional compilation are used as well.
 
-Note: current version was built against SDK 10.0.14393.0 (Windows 10).
-If you get the error <Cannot open include file: 'corecrt.h'>
-Please correct the actual SDK version installed in Project settings (General->Target Platform Version).
 
 rightmark.development@gmail
 
