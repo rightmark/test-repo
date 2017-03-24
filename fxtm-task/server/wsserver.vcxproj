@@ -22,7 +22,6 @@
     <ProjectGuid>{050207B6-0CE2-498F-BCC2-2D41E3DA77E9}</ProjectGuid>
     <RootNamespace>wsserver</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
