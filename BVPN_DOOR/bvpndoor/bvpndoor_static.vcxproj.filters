@@ -50,14 +50,8 @@
     <ClCompile Include="connectbutton.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BlinkVPNProvider.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="loginbutton.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release-static\moc_BlinkVPNProvider.cpp">
-      <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release-static\moc_bvpn.cpp">
       <Filter>Generated Files\Release</Filter>
@@ -91,9 +85,6 @@
       <Filter>Resource Files</Filter>
     </CustomBuild>
     <CustomBuild Include="connectbutton.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="BlinkVPNProvider.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="loginbutton.h">

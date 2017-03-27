@@ -51,14 +51,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BlinkVPNProvider.cpp" />
     <ClCompile Include="bvpn.cpp" />
     <ClCompile Include="connectbutton.cpp" />
     <ClCompile Include="GeneratedFiles\qrc_bvpn.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release-static|Win32'">
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release-static\moc_BlinkVPNProvider.cpp" />
     <ClCompile Include="GeneratedFiles\Release-static\moc_bvpn.cpp" />
     <ClCompile Include="GeneratedFiles\Release-static\moc_connectbutton.cpp" />
     <ClCompile Include="GeneratedFiles\Release-static\moc_loginbutton.cpp" />
@@ -74,12 +72,6 @@
       <Message Condition="'$(Configuration)|$(Platform)'=='Release-static|Win32'">Moc%27ing connectbutton.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release-static|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release-static|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -DUNICODE -DWIN32 -DNDEBUG -DQT_NO_DEBUG -DQT_NO_DEBUG_OUTPUT -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -D_UNICODE  "-I$(QTDIR)\include" "-I." "-I.\GeneratedFiles" "-I.\GeneratedFiles\$(ConfigurationName)\." "-fstdafx.h" "-f../../connectbutton.h"</Command>
-    </CustomBuild>
-    <CustomBuild Include="BlinkVPNProvider.h">
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release-static|Win32'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release-static|Win32'">Moc%27ing BlinkVPNProvider.h...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release-static|Win32'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release-static|Win32'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp" "-fstdafx.h" "-f../../BlinkVPNProvider.h"  -DUNICODE -DWIN32 -DNDEBUG -DQT_NO_DEBUG -DQT_NO_DEBUG_OUTPUT -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -D_UNICODE "-I$(QTDIR)\include" "-I." "-I.\GeneratedFiles" "-I.\GeneratedFiles\$(ConfigurationName)\."</Command>
     </CustomBuild>
     <ClInclude Include="GeneratedFiles\ui_bvpn.h" />
     <CustomBuild Include="bvpn.h">
